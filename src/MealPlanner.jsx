@@ -289,14 +289,14 @@ const [plan, setPlan] = useState([]);
 const [expanded, setExpanded] = useState(null);
 const [receiptOpen, setReceiptOpen] = useState(false);
 const [apiData, setApiData] = useState(null);
-const [_loading, setLoading] = useState(false);
+
 
 useEffect(() => {
-  setLoading(true);
+  
   fetchRecipes(store, excluded, 4)
     .then(data => {
       setApiData(data);
-      setLoading(false);
+      
     })
     .catch(() => setLoading(false));
 }, [store, excluded]);
