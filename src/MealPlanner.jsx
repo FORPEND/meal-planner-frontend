@@ -289,7 +289,7 @@ const [plan, setPlan] = useState([]);
 const [expanded, setExpanded] = useState(null);
 const [receiptOpen, setReceiptOpen] = useState(false);
 const [apiData, setApiData] = useState(null);
-const [loading, setLoading] = useState(false);
+cconst [_loading, setLoading] = useState(false);
 
 useEffect(() => {
   setLoading(true);
