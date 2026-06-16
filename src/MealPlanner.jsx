@@ -298,7 +298,7 @@ useEffect(() => {
       setApiData(data);
       
     })
-    .catch(() => setLoading(false));
+    .catch(() => {});
 }, [store, excluded]);
 
   const discounts = apiData?.discounts ?? DISCOUNTS[store];
