@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Plus, Check, Tag } from "lucide-react";
 
-const API = "http://localhost:3001";
+const API = "https://meal-planner-api-production-8522.up.railway.app";
 
 async function fetchRecipes(store, exclude, servings) {
   const params = new URLSearchParams({
