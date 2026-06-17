@@ -1012,7 +1012,7 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
                             <li key={i} className={ing.isAkcija ? "akcija" : ""}>
                               <span className="mp-ing-name">
                                 {ing.isAkcija && <Tag size={12} />}
-                                {ing.name} · {ing.amount}
+                                {ing.name} · {ing.qty} {ing.unit}
                               </span>
                               <span className="mp-ing-price">
                                 {ing.isAkcija && <s>{fmt(ing.regular)}</s>}
