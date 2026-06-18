@@ -1015,7 +1015,8 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
                                 {ing.unit === 'g' ? Math.round(ing.quantity * 1000) + 'g' : ing.unit === 'ml' ? Math.round(ing.quantity * 1000) + 'ml' : Math.round(ing.quantity) + ' kom'}{ing.matched && <span className="mp-ing-package"> · kupi: {ing.matched.name} ({ing.matched.unit})</span>}
                               </span>
                               <span className="mp-ing-price">
-                                {ing.isAkcija && <s>{fmt(ing.regular)}</s>}
+                                {ing.matched && ing.isAkcija && <s>{fmt(ing.matched.old)}</s>}
+                {ing.matched && fmt(ing.matched.new)}
                                 {fmt(ing.price)}
                               </span>
                             </li>
