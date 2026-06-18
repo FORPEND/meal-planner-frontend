@@ -3,15 +3,17 @@ import { ChevronDown, ChevronUp, Plus, Check, Tag } from "lucide-react";
 
 const API = "https://meal-planner-api-production-8522.up.railway.app";
 
-async function fetchRecipes(store, exclude, servings) {
+async function fetchRecipes(store, exclude, servings, meal) {
   const params = new URLSearchParams({
     store,
     servings,
     exclude: exclude.join(","),
   });
+  if (meal) params.set("meal", meal);
   const res = await fetch(`${API}/api/recipes?${params}`);
   return res.json();
 }
+
 const STORES = [
   { key: "konzum", name: "Konzum" },
   { key: "lidl", name: "Lidl" },
@@ -20,6 +22,12 @@ const STORES = [
   { key: "eurospin", name: "Eurospin" },
   { key: "plodine", name: "Plodine" },
   { key: "interspar", name: "Interspar" },
+];
+
+const MEAL_MODES = [
+  { key: "rucak", label: "Ručak" },
+  { key: "vecera", label: "Večera" },
+  { key: "oboje", label: "Oboje" },
 ];
 
 const DIET_FILTERS = [
@@ -283,45 +291,152 @@ function computeRecipe(recipe, discounts) {
 
 export default function MealPlanner() {
   const [store, setStore] = useState("konzum");
-const [budget, setBudget] = useState(45);
-const [excluded, setExcluded] = useState([]);
-const [plan, setPlan] = useState([]);
-const [expanded, setExpanded] = useState(null);
-const [receiptOpen, setReceiptOpen] = useState(false);
-const [apiData, setApiData] = useState(null);
+  const [mealMode, setMealMode] = useState("rucak");
+  const [budgetRucak, setBudgetRucak] = useState(45);
+  const [budgetVecera, setBudgetVecera] = useState(45);
+  const [excluded, setExcluded] = useState([]);
+  const [planRucak, setPlanRucak] = useState([]);
+  const [planVecera, setPlanVecera] = useState([]);
+  const [expandedRucak, setExpandedRucak] = useState(null);
+  const [expandedVecera, setExpandedVecera] = useState(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [apiDataRucak, setApiDataRucak] = useState(null);
+  const [apiDataVecera, setApiDataVecera] = useState(null);
 
+  useEffect(() => {
+    if (mealMode === "rucak" || mealMode === "oboje") {
+      fetchRecipes(store, excluded, 4, "rucak")
+        .then((data) => setApiDataRucak(data))
+        .catch(() => {});
+    }
+    if (mealMode === "vecera" || mealMode === "oboje") {
+      fetchRecipes(store, excluded, 4, "vecera")
+        .then((data) => setApiDataVecera(data))
+        .catch(() => {});
+    }
+  }, [store, excluded, mealMode]);
 
-useEffect(() => {
-  
-  fetchRecipes(store, excluded, 4)
-    .then(data => {
-      setApiData(data);
-      
-    })
-    .catch(() => {});
-}, [store, excluded]);
+  const discounts = apiDataRucak?.discounts ?? apiDataVecera?.discounts ?? DISCOUNTS[store];
+  const storeName = STORES.find((s) => s.key === store).name;
 
-  const discounts = apiData?.discounts ?? DISCOUNTS[store];
-const storeName = STORES.find((s) => s.key === store).name;
+  const allRecipesRucak = apiDataRucak?.recipes ?? RECIPES.map((r) => computeRecipe(r, discounts));
+  const allRecipesVecera = apiDataVecera?.recipes ?? RECIPES.map((r) => computeRecipe(r, discounts));
 
-const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, discounts));
+  const filterAndSort = (recipes) =>
+    recipes
+      .filter((r) => !r.ingredients.some((ing) => ing.tags.some((t) => excluded.includes(t))))
+      .sort((a, b) => b.akcijaCount - a.akcijaCount || a.total - b.total);
 
-  const visibleRecipes = allRecipes
-    .filter((r) => !r.ingredients.some((ing) => ing.tags.some((t) => excluded.includes(t))))
-    .sort((a, b) => b.akcijaCount - a.akcijaCount || a.total - b.total);
+  const visibleRecipesRucak = filterAndSort(allRecipesRucak);
+  const visibleRecipesVecera = filterAndSort(allRecipesVecera);
 
-  const planRecipes = allRecipes.filter((r) => plan.includes(r.id));
-  const planTotal = planRecipes.reduce((sum, r) => sum + r.total, 0);
-  const overBudget = planTotal > budget;
-  const progressPct = Math.min(100, (planTotal / budget) * 100);
+  const planRecipesRucak = allRecipesRucak.filter((r) => planRucak.includes(r.id));
+  const planRecipesVecera = allRecipesVecera.filter((r) => planVecera.includes(r.id));
+  const planTotalRucak = planRecipesRucak.reduce((sum, r) => sum + r.total, 0);
+  const planTotalVecera = planRecipesVecera.reduce((sum, r) => sum + r.total, 0);
 
-  const togglePlan = (id) =>
-    setPlan((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const receiptTotal =
+    mealMode === "rucak" ? planTotalRucak
+    : mealMode === "vecera" ? planTotalVecera
+    : planTotalRucak + planTotalVecera;
+  const receiptBudget =
+    mealMode === "rucak" ? budgetRucak
+    : mealMode === "vecera" ? budgetVecera
+    : budgetRucak + budgetVecera;
+  const receiptCount =
+    mealMode === "rucak" ? planRucak.length
+    : mealMode === "vecera" ? planVecera.length
+    : planRucak.length + planVecera.length;
+  const overBudget = receiptTotal > receiptBudget;
+  const progressPct = Math.min(100, (receiptTotal / receiptBudget) * 100);
 
-  const toggleExpand = (id) => setExpanded((e) => (e === id ? null : id));
+  const togglePlanRucak = (id) =>
+    setPlanRucak((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const togglePlanVecera = (id) =>
+    setPlanVecera((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const toggleExpandRucak = (id) => setExpandedRucak((e) => (e === id ? null : id));
+  const toggleExpandVecera = (id) => setExpandedVecera((e) => (e === id ? null : id));
 
   const toggleExcluded = (tag) =>
     setExcluded((ex) => (ex.includes(tag) ? ex.filter((x) => x !== tag) : [...ex, tag]));
+
+  function renderRecipeList(visibleRecipes, plan, togglePlan, expanded, toggleExpand) {
+    if (visibleRecipes.length === 0) {
+      return (
+        <div className="mp-empty">
+          Nema jela koja odgovaraju odabranim filterima. Pokušaj ukloniti neki filter iznad.
+        </div>
+      );
+    }
+    return (
+      <div className="mp-recipes">
+        {visibleRecipes.map((r) => {
+          const inPlan = plan.includes(r.id);
+          const isExpanded = expanded === r.id;
+          return (
+            <article className={`mp-recipe ${inPlan ? "in-plan" : ""}`} key={r.id}>
+              <button className="mp-recipe-head" onClick={() => toggleExpand(r.id)}>
+                <div>
+                  <h3>{r.name}</h3>
+                  <div className="mp-recipe-meta">
+                    {r.time} · {r.servings} {servingWord(r.servings)}
+                  </div>
+                </div>
+                <div className="mp-recipe-right">
+                  <div className="mp-recipe-total">
+                    <span className="mp-price">{fmt(r.total)}</span>
+                    {r.akcijaCount > 0 && (
+                      <span className="mp-akcija-pill">
+                        <Tag size={11} />
+                        {r.akcijaCount}×
+                      </span>
+                    )}
+                  </div>
+                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </div>
+              </button>
+              {isExpanded && (
+                <div className="mp-recipe-body">
+                  <ul className="mp-ingredients">
+                    {r.ingredients.map((ing, i) => (
+                      <li key={i} className={ing.isAkcija ? "akcija" : ""}>
+                        <span className="mp-ing-name">
+                          {ing.isAkcija && <Tag size={12} />}
+                          {ing.unit === 'g' ? Math.round(ing.quantity * 1000) + 'g' : ing.unit === 'ml' ? Math.round(ing.quantity * 1000) + 'ml' : Math.round(ing.quantity) + ' kom'}{ing.matched && <span className="mp-ing-package"> · kupi: {ing.matched.name} ({ing.matched.unit})</span>}
+                        </span>
+                        <span className="mp-ing-price">
+                          {ing.matched && ing.isAkcija && <s>{fmt(ing.matched.old)}</s>}
+                          {ing.matched && fmt(ing.matched.new)}
+                          {fmt(ing.price)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <ol className="mp-steps">
+                    {r.steps.map((s, i) => (
+                      <li key={i}>{s}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+              <button className="mp-add-btn" onClick={() => togglePlan(r.id)}>
+                {inPlan ? (
+                  <>
+                    <Check size={14} /> U planu
+                  </>
+                ) : (
+                  <>
+                    <Plus size={14} /> Dodaj u plan
+                  </>
+                )}
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="mp-root">
@@ -396,6 +511,30 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
           letter-spacing: 0.01em;
           margin-bottom: 14px;
         }
+
+        .mp-meal-row {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+        .mp-meal-row button {
+          flex: 1;
+          font-family: 'Space Mono', monospace;
+          font-size: 11px;
+          font-weight: 700;
+          padding: 9px 12px;
+          border: 2px solid var(--ink);
+          border-radius: 6px;
+          background: transparent;
+          color: var(--ink);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        .mp-meal-row button.active {
+          background: var(--ink);
+          color: var(--paper);
+        }
+
         .mp-field {
           margin-bottom: 10px;
         }
@@ -504,6 +643,31 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
           background: var(--green);
           display: inline-block;
           flex-shrink: 0;
+        }
+
+        .mp-meal-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .mp-meal-divider + .mp-meal-divider,
+        .mp-recipes + .mp-meal-divider,
+        .mp-empty + .mp-meal-divider {
+          margin-top: 32px;
+        }
+        .mp-meal-divider-title {
+          font-family: 'Oswald', sans-serif;
+          font-size: 16px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          white-space: nowrap;
+        }
+        .mp-meal-divider-line {
+          flex: 1;
+          height: 2px;
+          background: var(--line);
         }
 
         .mp-diet-row {
@@ -873,6 +1037,14 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
           padding: 8px 0;
           justify-content: center;
         }
+        .mp-receipt-sublabel {
+          font-size: 10px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: var(--ink-soft);
+          justify-content: flex-start;
+          padding-top: 4px;
+        }
         .mp-receipt-remove {
           background: none;
           border: none;
@@ -894,6 +1066,19 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
       <header className="mp-header">
         <div className="mp-eyebrow">Tjedni planer obroka</div>
         <h1 className="mp-title">Što kuham ovaj tjedan?</h1>
+
+        <div className="mp-meal-row">
+          {MEAL_MODES.map((m) => (
+            <button
+              key={m.key}
+              className={mealMode === m.key ? "active" : ""}
+              onClick={() => setMealMode(m.key)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         <div className="mp-field">
           <div className="mp-field-label">Dućan</div>
           <div className="mp-store-row">
@@ -908,21 +1093,63 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
             ))}
           </div>
         </div>
-        <div className="mp-field">
-          <div className="mp-field-label">Tjedni budžet</div>
-          <div className="mp-budget-row">
-            <input
-              type="range"
-              min={15}
-              max={100}
-              step={5}
-              value={budget}
-              onChange={(e) => setBudget(Number(e.target.value))}
-              aria-label="Tjedni budžet u eurima"
-            />
-            <span className="mp-budget-value">{budget} €</span>
+
+        {mealMode === "oboje" ? (
+          <>
+            <div className="mp-field">
+              <div className="mp-field-label">Budžet — Ručak</div>
+              <div className="mp-budget-row">
+                <input
+                  type="range"
+                  min={10}
+                  max={80}
+                  step={5}
+                  value={budgetRucak}
+                  onChange={(e) => setBudgetRucak(Number(e.target.value))}
+                  aria-label="Budžet za ručak u eurima"
+                />
+                <span className="mp-budget-value">{budgetRucak} €</span>
+              </div>
+            </div>
+            <div className="mp-field">
+              <div className="mp-field-label">Budžet — Večera</div>
+              <div className="mp-budget-row">
+                <input
+                  type="range"
+                  min={10}
+                  max={80}
+                  step={5}
+                  value={budgetVecera}
+                  onChange={(e) => setBudgetVecera(Number(e.target.value))}
+                  aria-label="Budžet za večeru u eurima"
+                />
+                <span className="mp-budget-value">{budgetVecera} €</span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="mp-field">
+            <div className="mp-field-label">Tjedni budžet</div>
+            <div className="mp-budget-row">
+              <input
+                type="range"
+                min={15}
+                max={100}
+                step={5}
+                value={mealMode === "vecera" ? budgetVecera : budgetRucak}
+                onChange={(e) =>
+                  mealMode === "vecera"
+                    ? setBudgetVecera(Number(e.target.value))
+                    : setBudgetRucak(Number(e.target.value))
+                }
+                aria-label="Tjedni budžet u eurima"
+              />
+              <span className="mp-budget-value">
+                {mealMode === "vecera" ? budgetVecera : budgetRucak} €
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       <main className="mp-main">
@@ -969,81 +1196,30 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
         </section>
 
         <section className="mp-section">
-          <div className="mp-section-label">
-            <span className="mp-dot" />
-            Prijedlozi jela
-          </div>
-          {visibleRecipes.length === 0 ? (
-            <div className="mp-empty">
-              Nema jela koja odgovaraju odabranim filterima. Pokušaj ukloniti neki filter
-              iznad.
-            </div>
+          {mealMode === "oboje" ? (
+            <>
+              <div className="mp-meal-divider">
+                <span className="mp-meal-divider-title">Ručak</span>
+                <span className="mp-meal-divider-line" />
+              </div>
+              {renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak)}
+              <div className="mp-meal-divider">
+                <span className="mp-meal-divider-title">Večera</span>
+                <span className="mp-meal-divider-line" />
+              </div>
+              {renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera)}
+            </>
           ) : (
-            <div className="mp-recipes">
-              {visibleRecipes.map((r) => {
-                const inPlan = plan.includes(r.id);
-                const isExpanded = expanded === r.id;
-                return (
-                  <article className={`mp-recipe ${inPlan ? "in-plan" : ""}`} key={r.id}>
-                    <button className="mp-recipe-head" onClick={() => toggleExpand(r.id)}>
-                      <div>
-                        <h3>{r.name}</h3>
-                        <div className="mp-recipe-meta">
-                          {r.time} · {r.servings} {servingWord(r.servings)}
-                        </div>
-                      </div>
-                      <div className="mp-recipe-right">
-                        <div className="mp-recipe-total">
-                          <span className="mp-price">{fmt(r.total)}</span>
-                          {r.akcijaCount > 0 && (
-                            <span className="mp-akcija-pill">
-                              <Tag size={11} />
-                              {r.akcijaCount}×
-                            </span>
-                          )}
-                        </div>
-                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      </div>
-                    </button>
-                    {isExpanded && (
-                      <div className="mp-recipe-body">
-                        <ul className="mp-ingredients">
-                          {r.ingredients.map((ing, i) => (
-                            <li key={i} className={ing.isAkcija ? "akcija" : ""}>
-                              <span className="mp-ing-name">
-                                {ing.isAkcija && <Tag size={12} />}
-                                {ing.unit === 'g' ? Math.round(ing.quantity * 1000) + 'g' : ing.unit === 'ml' ? Math.round(ing.quantity * 1000) + 'ml' : Math.round(ing.quantity) + ' kom'}{ing.matched && <span className="mp-ing-package"> · kupi: {ing.matched.name} ({ing.matched.unit})</span>}
-                              </span>
-                              <span className="mp-ing-price">
-                                {ing.matched && ing.isAkcija && <s>{fmt(ing.matched.old)}</s>}
-                {ing.matched && fmt(ing.matched.new)}
-                                {fmt(ing.price)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                        <ol className="mp-steps">
-                          {r.steps.map((s, i) => (
-                            <li key={i}>{s}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-                    <button className="mp-add-btn" onClick={() => togglePlan(r.id)}>
-                      {inPlan ? (
-                        <>
-                          <Check size={14} /> U planu
-                        </>
-                      ) : (
-                        <>
-                          <Plus size={14} /> Dodaj u plan
-                        </>
-                      )}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
+            <>
+              <div className="mp-section-label">
+                <span className="mp-dot" />
+                Prijedlozi jela
+              </div>
+              {mealMode === "vecera"
+                ? renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera)
+                : renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak)
+              }
+            </>
           )}
         </section>
 
@@ -1057,12 +1233,12 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
         <div className="mp-receipt-inner">
           <div className="mp-receipt-summary">
             <div className="mp-receipt-text">
-              <div className="mp-receipt-label">Tjedni plan · {plan.length} jela</div>
+              <div className="mp-receipt-label">Tjedni plan · {receiptCount} jela</div>
               <div
                 className="mp-receipt-total"
                 style={{ color: overBudget ? "var(--red)" : "var(--ink)" }}
               >
-                {fmt(planTotal)} <span className="mp-receipt-budget">/ {fmt(budget)}</span>
+                {fmt(receiptTotal)} <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
               </div>
             </div>
             <div className="mp-receipt-bar">
@@ -1084,24 +1260,72 @@ const allRecipes = apiData?.recipes ?? RECIPES.map((r) => computeRecipe(r, disco
           </div>
           {receiptOpen && (
             <ul className="mp-receipt-items">
-              {planRecipes.length === 0 && (
-                <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
+              {mealMode === "oboje" ? (
+                <>
+                  {planRecipesRucak.length === 0 && planRecipesVecera.length === 0 && (
+                    <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
+                  )}
+                  {planRecipesRucak.length > 0 && (
+                    <li className="mp-receipt-sublabel">Ručak</li>
+                  )}
+                  {planRecipesRucak.map((r) => (
+                    <li key={`rucak-${r.id}`}>
+                      <span>{r.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {fmt(r.total)}
+                        <button
+                          className="mp-receipt-remove"
+                          onClick={() => togglePlanRucak(r.id)}
+                          aria-label={`Ukloni ${r.name} iz plana ručka`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                  {planRecipesVecera.length > 0 && (
+                    <li className="mp-receipt-sublabel">Večera</li>
+                  )}
+                  {planRecipesVecera.map((r) => (
+                    <li key={`vecera-${r.id}`}>
+                      <span>{r.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {fmt(r.total)}
+                        <button
+                          className="mp-receipt-remove"
+                          onClick={() => togglePlanVecera(r.id)}
+                          aria-label={`Ukloni ${r.name} iz plana večere`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {(mealMode === "rucak" ? planRecipesRucak : planRecipesVecera).length === 0 && (
+                    <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
+                  )}
+                  {(mealMode === "rucak" ? planRecipesRucak : planRecipesVecera).map((r) => (
+                    <li key={r.id}>
+                      <span>{r.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {fmt(r.total)}
+                        <button
+                          className="mp-receipt-remove"
+                          onClick={() =>
+                            mealMode === "rucak" ? togglePlanRucak(r.id) : togglePlanVecera(r.id)
+                          }
+                          aria-label={`Ukloni ${r.name} iz plana`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </>
               )}
-              {planRecipes.map((r) => (
-                <li key={r.id}>
-                  <span>{r.name}</span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {fmt(r.total)}
-                    <button
-                      className="mp-receipt-remove"
-                      onClick={() => togglePlan(r.id)}
-                      aria-label={`Ukloni ${r.name} iz plana`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                </li>
-              ))}
             </ul>
           )}
         </div>
