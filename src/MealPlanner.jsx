@@ -1350,7 +1350,7 @@ export default function MealPlanner() {
       {/* ── HEADER ── */}
       <header className="mp-header">
         <div className="mp-eyebrow">Tjedni planer obroka</div>
-        <h1 className="mp-title">Što kuham ovaj tjedan?</h1>
+        <h1 className="mp-title">Kuhaj štedljivo</h1>
 
         <div className="mp-meal-row">
           {MEAL_MODES.map((m) => (
