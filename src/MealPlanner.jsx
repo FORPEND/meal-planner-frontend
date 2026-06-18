@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Plus, Check, Tag } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Check, Tag, ShoppingCart } from "lucide-react";
 
 const API = "https://meal-planner-api-production-8522.up.railway.app";
 
@@ -267,6 +267,170 @@ const RECIPES = [
   },
 ];
 
+// ─── Shopping list helpers ────────────────────────────────────────────────────
+
+const DEPT_MAP = {
+  piletina: "Meso",
+  mljeveno: "Meso",
+  tuna: "Meso",
+  sir: "Mliječni proizvodi",
+  vrhnje: "Mliječni proizvodi",
+  jaja: "Mliječni proizvodi",
+  rajcice: "Povrće",
+  mrkva: "Povrće",
+  brokula: "Povrće",
+  luk: "Povrće",
+  krumpir: "Povrće",
+  tjestenina: "Suho / Žitarice",
+  riza: "Suho / Žitarice",
+  orasi: "Suho / Žitarice",
+};
+
+const DEPT_ORDER = ["Meso", "Mliječni proizvodi", "Povrće", "Suho / Žitarice", "Ostalo"];
+
+/** Parses "500 g", "1 kg", "200 ml", "10 kom" → { value, unit } in base units (g / ml / kom). */
+function parseAmount(str) {
+  if (!str) return null;
+  const m = String(str).trim().match(/^([\d.]+)\s*(g|ml|kg|l|kom)$/i);
+  if (!m) return null;
+  const val = parseFloat(m[1]);
+  const u = m[2].toLowerCase();
+  if (u === "kg") return { value: val * 1000, unit: "g" };
+  if (u === "l") return { value: val * 1000, unit: "ml" };
+  return { value: val, unit: u };
+}
+
+function fmtQty(totalG, totalMl, totalKom) {
+  if (totalG > 0) {
+    if (totalG >= 1000) {
+      const kg = totalG / 1000;
+      return (Number.isInteger(kg) ? kg : parseFloat(kg.toFixed(1))) + " kg";
+    }
+    return Math.round(totalG) + " g";
+  }
+  if (totalMl > 0) {
+    if (totalMl >= 1000) {
+      const l = totalMl / 1000;
+      return (Number.isInteger(l) ? l : parseFloat(l.toFixed(1))) + " L";
+    }
+    return Math.round(totalMl) + " ml";
+  }
+  return Math.round(totalKom) + " kom";
+}
+
+/**
+ * Returns { dept: [{ key, productName, productUnit, neededStr, packages, totalPrice, hasAkcija }] }
+ */
+function buildShoppingList(planRecipes, discounts) {
+  // category key → aggregated totals
+  const grouped = {};
+  // name → count (for null-category ingredients like oil, spices)
+  const noCategory = {};
+
+  planRecipes.forEach((recipe) => {
+    recipe.ingredients.forEach((ing) => {
+      if (!ing.category) {
+        const k = ing.name;
+        noCategory[k] = (noCategory[k] || 0) + 1;
+        return;
+      }
+
+      if (!grouped[ing.category]) {
+        grouped[ing.category] = {
+          ingredientName: ing.name,
+          totalG: 0,
+          totalMl: 0,
+          totalKom: 0,
+          storeProduct: discounts.find((d) => d.category === ing.category) || null,
+        };
+      }
+
+      const g = grouped[ing.category];
+
+      // API response has quantity (kg/L) + unit string; fallback has amount string
+      if (ing.quantity !== undefined && ing.unit) {
+        if (ing.unit === "g") g.totalG += (ing.quantity || 0) * 1000;
+        else if (ing.unit === "ml") g.totalMl += (ing.quantity || 0) * 1000;
+        else g.totalKom += ing.quantity || 0;
+      } else {
+        const parsed = parseAmount(ing.amount);
+        if (parsed) {
+          if (parsed.unit === "g") g.totalG += parsed.value;
+          else if (parsed.unit === "ml") g.totalMl += parsed.value;
+          else g.totalKom += parsed.value;
+        }
+      }
+    });
+  });
+
+  // Build flat item list
+  const items = [];
+
+  Object.entries(grouped).forEach(([cat, info]) => {
+    const { ingredientName, totalG, totalMl, totalKom, storeProduct } = info;
+    const neededStr = fmtQty(totalG, totalMl, totalKom);
+
+    // Determine dominant unit for package calculation
+    const dominantUnit = totalG > 0 ? "g" : totalMl > 0 ? "ml" : "kom";
+    const totalNeeded = totalG > 0 ? totalG : totalMl > 0 ? totalMl : totalKom;
+
+    let packages = 1;
+    let productName = ingredientName;
+    let productUnit = "";
+    let totalPrice = null;
+    let hasAkcija = false;
+
+    if (storeProduct) {
+      productName = storeProduct.name;
+      productUnit = storeProduct.unit;
+      hasAkcija = true;
+
+      const pkgParsed = parseAmount(storeProduct.unit);
+      if (pkgParsed && pkgParsed.unit === dominantUnit && pkgParsed.value > 0) {
+        packages = Math.ceil(totalNeeded / pkgParsed.value);
+      }
+      totalPrice = storeProduct.new * packages;
+    }
+
+    items.push({
+      key: cat,
+      dept: DEPT_MAP[cat] || "Ostalo",
+      productName,
+      productUnit,
+      neededStr,
+      packages,
+      totalPrice,
+      hasAkcija,
+    });
+  });
+
+  // Null-category ingredients → Ostalo
+  Object.entries(noCategory).forEach(([name, count]) => {
+    items.push({
+      key: `nc-${name}`,
+      dept: "Ostalo",
+      productName: name,
+      productUnit: "",
+      neededStr: count > 1 ? `${count}×` : "",
+      packages: count,
+      totalPrice: null,
+      hasAkcija: false,
+    });
+  });
+
+  // Group by department
+  const byDept = {};
+  DEPT_ORDER.forEach((d) => (byDept[d] = []));
+  items.forEach((item) => {
+    if (!byDept[item.dept]) byDept[item.dept] = [];
+    byDept[item.dept].push(item);
+  });
+
+  return byDept;
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
 const fmt = (n) => n.toFixed(2).replace(".", ",") + " €";
 const servingWord = (n) => (n === 1 ? "porcija" : n >= 2 && n <= 4 ? "porcije" : "porcija");
 
@@ -289,6 +453,8 @@ function computeRecipe(recipe, discounts) {
   return { ...recipe, ingredients, total, akcijaCount };
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function MealPlanner() {
   const [store, setStore] = useState("konzum");
   const [mealMode, setMealMode] = useState("rucak");
@@ -302,6 +468,7 @@ export default function MealPlanner() {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [apiDataRucak, setApiDataRucak] = useState(null);
   const [apiDataVecera, setApiDataVecera] = useState(null);
+  const [checkedItems, setCheckedItems] = useState({});
 
   useEffect(() => {
     if (mealMode === "rucak" || mealMode === "oboje") {
@@ -349,6 +516,25 @@ export default function MealPlanner() {
     : planRucak.length + planVecera.length;
   const overBudget = receiptTotal > receiptBudget;
   const progressPct = Math.min(100, (receiptTotal / receiptBudget) * 100);
+
+  // Shopping list — all planned recipes for current mode
+  const shoppingPlanRecipes =
+    mealMode === "rucak" ? planRecipesRucak
+    : mealMode === "vecera" ? planRecipesVecera
+    : [...planRecipesRucak, ...planRecipesVecera];
+
+  const shoppingList =
+    shoppingPlanRecipes.length > 0
+      ? buildShoppingList(shoppingPlanRecipes, discounts)
+      : null;
+
+  const shoppingTotal = shoppingList
+    ? DEPT_ORDER.flatMap((d) => shoppingList[d] || [])
+        .reduce((sum, item) => sum + (item.totalPrice || 0), 0)
+    : 0;
+
+  const toggleChecked = (key) =>
+    setCheckedItems((c) => ({ ...c, [key]: !c[key] }));
 
   const togglePlanRucak = (id) =>
     setPlanRucak((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -422,13 +608,9 @@ export default function MealPlanner() {
               )}
               <button className="mp-add-btn" onClick={() => togglePlan(r.id)}>
                 {inPlan ? (
-                  <>
-                    <Check size={14} /> U planu
-                  </>
+                  <><Check size={14} /> U planu</>
                 ) : (
-                  <>
-                    <Plus size={14} /> Dodaj u plan
-                  </>
+                  <><Plus size={14} /> Dodaj u plan</>
                 )}
               </button>
             </article>
@@ -454,6 +636,7 @@ export default function MealPlanner() {
           --green: #2F5D43;
           --green-soft: #E1EAE3;
           --amber: #F0A93B;
+          --amber-soft: #FDF3DC;
           --red: #C0463A;
           --line: #E2D8C4;
           font-family: 'Work Sans', sans-serif;
@@ -474,6 +657,7 @@ export default function MealPlanner() {
           padding: 0;
         }
 
+        /* ── Header ── */
         .mp-header {
           width: 100%;
           max-width: 480px;
@@ -511,7 +695,6 @@ export default function MealPlanner() {
           letter-spacing: 0.01em;
           margin-bottom: 14px;
         }
-
         .mp-meal-row {
           display: flex;
           gap: 8px;
@@ -534,7 +717,6 @@ export default function MealPlanner() {
           background: var(--ink);
           color: var(--paper);
         }
-
         .mp-field {
           margin-bottom: 10px;
         }
@@ -618,6 +800,7 @@ export default function MealPlanner() {
           flex-shrink: 0;
         }
 
+        /* ── Main layout ── */
         .mp-main {
           width: 100%;
           max-width: 480px;
@@ -645,13 +828,13 @@ export default function MealPlanner() {
           flex-shrink: 0;
         }
 
+        /* ── Meal dividers (oboje mode) ── */
         .mp-meal-divider {
           display: flex;
           align-items: center;
           gap: 12px;
           margin-bottom: 16px;
         }
-        .mp-meal-divider + .mp-meal-divider,
         .mp-recipes + .mp-meal-divider,
         .mp-empty + .mp-meal-divider {
           margin-top: 32px;
@@ -670,6 +853,7 @@ export default function MealPlanner() {
           background: var(--line);
         }
 
+        /* ── Diet chips ── */
         .mp-diet-row {
           display: flex;
           gap: 8px;
@@ -696,6 +880,7 @@ export default function MealPlanner() {
           border-color: var(--red);
         }
 
+        /* ── Discount tags ── */
         .mp-tags-row {
           display: flex;
           gap: 14px;
@@ -714,12 +899,8 @@ export default function MealPlanner() {
           border: 2px solid var(--ink);
           border-radius: 4px 16px 4px 4px;
         }
-        .mp-tag:nth-child(odd) {
-          transform: rotate(-1.5deg);
-        }
-        .mp-tag:nth-child(even) {
-          transform: rotate(1.5deg);
-        }
+        .mp-tag:nth-child(odd) { transform: rotate(-1.5deg); }
+        .mp-tag:nth-child(even) { transform: rotate(1.5deg); }
         .mp-tag-hole {
           position: absolute;
           top: 8px;
@@ -774,6 +955,7 @@ export default function MealPlanner() {
           border-radius: 2px;
         }
 
+        /* ── Recipe cards ── */
         .mp-empty {
           background: var(--paper-2);
           border: 1px dashed var(--line);
@@ -784,7 +966,6 @@ export default function MealPlanner() {
           color: var(--ink-soft);
           line-height: 1.5;
         }
-
         .mp-recipes {
           display: flex;
           flex-direction: column;
@@ -796,9 +977,7 @@ export default function MealPlanner() {
           border-radius: 10px;
           overflow: hidden;
         }
-        .mp-recipe.in-plan {
-          border-color: var(--green);
-        }
+        .mp-recipe.in-plan { border-color: var(--green); }
         .mp-recipe-head {
           width: 100%;
           display: flex;
@@ -873,10 +1052,7 @@ export default function MealPlanner() {
           font-size: 14px;
           padding: 4px 0;
         }
-        .mp-ingredients li.akcija {
-          color: #8A5A12;
-          font-weight: 600;
-        }
+        .mp-ingredients li.akcija { color: #8A5A12; font-weight: 600; }
         .mp-ing-name {
           display: inline-flex;
           align-items: center;
@@ -889,9 +1065,7 @@ export default function MealPlanner() {
           gap: 6px;
           flex-shrink: 0;
         }
-        .mp-ing-price s {
-          opacity: 0.5;
-        }
+        .mp-ing-price s { opacity: 0.5; }
         .mp-steps {
           margin: 12px 0 4px;
           padding-left: 20px;
@@ -923,6 +1097,118 @@ export default function MealPlanner() {
           color: var(--paper);
         }
 
+        /* ── Shopping list ── */
+        .mp-shop-header {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          margin-bottom: 16px;
+        }
+        .mp-shop-total {
+          font-family: 'Space Mono', monospace;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--ink);
+        }
+        .mp-shop-dept {
+          margin-bottom: 6px;
+        }
+        .mp-shop-dept-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 10px 0 8px;
+        }
+        .mp-shop-dept-name {
+          font-family: 'Space Mono', monospace;
+          font-size: 10px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: var(--ink-soft);
+          white-space: nowrap;
+        }
+        .mp-shop-dept-line {
+          flex: 1;
+          height: 1px;
+          background: var(--line);
+        }
+        .mp-shop-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 9px 0;
+          border-bottom: 1px dashed var(--line);
+          cursor: pointer;
+          -webkit-tap-highlight-color: transparent;
+          user-select: none;
+          transition: opacity 0.15s ease;
+        }
+        .mp-shop-item:last-child { border-bottom: none; }
+        .mp-shop-check {
+          width: 20px;
+          height: 20px;
+          border: 2px solid var(--ink);
+          border-radius: 4px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 1px;
+          color: var(--paper);
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .mp-shop-item.checked .mp-shop-check {
+          background: var(--green);
+          border-color: var(--green);
+        }
+        .mp-shop-item.checked .mp-shop-name {
+          text-decoration: line-through;
+          opacity: 0.4;
+        }
+        .mp-shop-item.checked .mp-shop-detail,
+        .mp-shop-item.checked .mp-shop-price {
+          opacity: 0.35;
+        }
+        .mp-shop-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .mp-shop-name {
+          font-weight: 600;
+          font-size: 14px;
+          line-height: 1.3;
+          margin-bottom: 2px;
+        }
+        .mp-shop-detail {
+          font-family: 'Space Mono', monospace;
+          font-size: 10px;
+          color: var(--ink-soft);
+          line-height: 1.5;
+        }
+        .mp-shop-pkg {
+          display: inline-block;
+          background: var(--amber-soft);
+          border: 1px solid rgba(240,169,59,0.4);
+          border-radius: 3px;
+          padding: 1px 5px;
+          font-size: 10px;
+          font-weight: 700;
+          color: #7A5520;
+          margin-left: 4px;
+          vertical-align: middle;
+        }
+        .mp-shop-price {
+          font-family: 'Space Mono', monospace;
+          font-size: 12px;
+          font-weight: 700;
+          text-align: right;
+          flex-shrink: 0;
+          padding-top: 2px;
+          min-width: 52px;
+        }
+        .mp-shop-price.akcija { color: #7A5520; }
+
+        /* ── Misc ── */
         .mp-note {
           font-size: 12px;
           color: var(--ink-soft);
@@ -931,6 +1217,7 @@ export default function MealPlanner() {
           border-top: 1px dashed var(--line);
         }
 
+        /* ── Bottom receipt ── */
         .mp-receipt {
           position: fixed;
           bottom: 0;
@@ -969,10 +1256,7 @@ export default function MealPlanner() {
           gap: 14px;
           padding: 14px 20px;
         }
-        .mp-receipt-text {
-          flex: 1;
-          min-width: 0;
-        }
+        .mp-receipt-text { flex: 1; min-width: 0; }
         .mp-receipt-label {
           font-family: 'Space Mono', monospace;
           font-size: 10px;
@@ -1057,12 +1341,13 @@ export default function MealPlanner() {
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .mp-receipt-bar-fill {
-            transition: none;
-          }
+          .mp-receipt-bar-fill { transition: none; }
+          .mp-shop-item { transition: none; }
+          .mp-shop-check { transition: none; }
         }
       `}</style>
 
+      {/* ── HEADER ── */}
       <header className="mp-header">
         <div className="mp-eyebrow">Tjedni planer obroka</div>
         <h1 className="mp-title">Što kuham ovaj tjedan?</h1>
@@ -1100,10 +1385,7 @@ export default function MealPlanner() {
               <div className="mp-field-label">Budžet — Ručak</div>
               <div className="mp-budget-row">
                 <input
-                  type="range"
-                  min={10}
-                  max={80}
-                  step={5}
+                  type="range" min={10} max={80} step={5}
                   value={budgetRucak}
                   onChange={(e) => setBudgetRucak(Number(e.target.value))}
                   aria-label="Budžet za ručak u eurima"
@@ -1115,10 +1397,7 @@ export default function MealPlanner() {
               <div className="mp-field-label">Budžet — Večera</div>
               <div className="mp-budget-row">
                 <input
-                  type="range"
-                  min={10}
-                  max={80}
-                  step={5}
+                  type="range" min={10} max={80} step={5}
                   value={budgetVecera}
                   onChange={(e) => setBudgetVecera(Number(e.target.value))}
                   aria-label="Budžet za večeru u eurima"
@@ -1132,10 +1411,7 @@ export default function MealPlanner() {
             <div className="mp-field-label">Tjedni budžet</div>
             <div className="mp-budget-row">
               <input
-                type="range"
-                min={15}
-                max={100}
-                step={5}
+                type="range" min={15} max={100} step={5}
                 value={mealMode === "vecera" ? budgetVecera : budgetRucak}
                 onChange={(e) =>
                   mealMode === "vecera"
@@ -1152,7 +1428,10 @@ export default function MealPlanner() {
         )}
       </header>
 
+      {/* ── MAIN ── */}
       <main className="mp-main">
+
+        {/* Diet filters */}
         <section className="mp-section">
           <div className="mp-section-label">
             <span className="mp-dot" />
@@ -1172,6 +1451,7 @@ export default function MealPlanner() {
           </div>
         </section>
 
+        {/* Discounts */}
         <section className="mp-section">
           <div className="mp-section-label">
             <span className="mp-dot" />
@@ -1195,6 +1475,7 @@ export default function MealPlanner() {
           </div>
         </section>
 
+        {/* Recipe lists */}
         <section className="mp-section">
           {mealMode === "oboje" ? (
             <>
@@ -1223,12 +1504,77 @@ export default function MealPlanner() {
           )}
         </section>
 
+        {/* Shopping list */}
+        {shoppingList && (
+          <section className="mp-section">
+            <div className="mp-shop-header">
+              <div className="mp-section-label" style={{ margin: 0 }}>
+                <span className="mp-dot" style={{ background: "var(--amber)" }} />
+                <ShoppingCart size={14} style={{ marginLeft: 2, marginRight: -2 }} />
+                Shopping lista
+              </div>
+              {shoppingTotal > 0 && (
+                <span className="mp-shop-total">{fmt(shoppingTotal)}</span>
+              )}
+            </div>
+
+            {DEPT_ORDER.map((dept) => {
+              const items = shoppingList[dept];
+              if (!items || items.length === 0) return null;
+              return (
+                <div className="mp-shop-dept" key={dept}>
+                  <div className="mp-shop-dept-header">
+                    <span className="mp-shop-dept-name">{dept}</span>
+                    <span className="mp-shop-dept-line" />
+                  </div>
+                  {items.map((item) => {
+                    const checked = !!checkedItems[item.key];
+                    return (
+                      <div
+                        key={item.key}
+                        className={`mp-shop-item ${checked ? "checked" : ""}`}
+                        onClick={() => toggleChecked(item.key)}
+                        role="checkbox"
+                        aria-checked={checked}
+                      >
+                        <div className="mp-shop-check">
+                          {checked && <Check size={12} strokeWidth={3} />}
+                        </div>
+                        <div className="mp-shop-info">
+                          <div className="mp-shop-name">{item.productName}</div>
+                          <div className="mp-shop-detail">
+                            Trebaš: {item.neededStr}
+                            {item.productUnit && (
+                              <>
+                                {" "}·{" "}
+                                <span className="mp-shop-pkg">
+                                  {item.packages}× {item.productUnit}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {item.totalPrice !== null && (
+                          <div className={`mp-shop-price ${item.hasAkcija ? "akcija" : ""}`}>
+                            {fmt(item.totalPrice)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </section>
+        )}
+
         <p className="mp-note">
           Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
           dolaze iz stvarnih kataloga navedenih dućana.
         </p>
       </main>
 
+      {/* ── BOTTOM RECEIPT ── */}
       <div className="mp-receipt">
         <div className="mp-receipt-inner">
           <div className="mp-receipt-summary">
@@ -1238,7 +1584,8 @@ export default function MealPlanner() {
                 className="mp-receipt-total"
                 style={{ color: overBudget ? "var(--red)" : "var(--ink)" }}
               >
-                {fmt(receiptTotal)} <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
+                {fmt(receiptTotal)}{" "}
+                <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
               </div>
             </div>
             <div className="mp-receipt-bar">
@@ -1258,6 +1605,7 @@ export default function MealPlanner() {
               {receiptOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
             </button>
           </div>
+
           {receiptOpen && (
             <ul className="mp-receipt-items">
               {mealMode === "oboje" ? (
@@ -1277,9 +1625,7 @@ export default function MealPlanner() {
                           className="mp-receipt-remove"
                           onClick={() => togglePlanRucak(r.id)}
                           aria-label={`Ukloni ${r.name} iz plana ručka`}
-                        >
-                          ×
-                        </button>
+                        >×</button>
                       </span>
                     </li>
                   ))}
@@ -1295,9 +1641,7 @@ export default function MealPlanner() {
                           className="mp-receipt-remove"
                           onClick={() => togglePlanVecera(r.id)}
                           aria-label={`Ukloni ${r.name} iz plana večere`}
-                        >
-                          ×
-                        </button>
+                        >×</button>
                       </span>
                     </li>
                   ))}
@@ -1318,9 +1662,7 @@ export default function MealPlanner() {
                             mealMode === "rucak" ? togglePlanRucak(r.id) : togglePlanVecera(r.id)
                           }
                           aria-label={`Ukloni ${r.name} iz plana`}
-                        >
-                          ×
-                        </button>
+                        >×</button>
                       </span>
                     </li>
                   ))}
