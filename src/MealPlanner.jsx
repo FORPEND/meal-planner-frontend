@@ -3,13 +3,14 @@ import { ChevronDown, ChevronUp, Plus, Check, Tag, ShoppingCart } from "lucide-r
 
 const API = "https://meal-planner-api-production-8522.up.railway.app";
 
-async function fetchRecipes(store, exclude, servings, meal) {
+async function fetchRecipes(store, exclude, servings, meal, budget) {
   const params = new URLSearchParams({
     store,
     servings,
     exclude: exclude.join(","),
   });
   if (meal) params.set("meal", meal);
+  if (budget != null) params.set("budget", budget);
   const res = await fetch(`${API}/api/recipes?${params}`);
   return res.json();
 }
@@ -472,16 +473,16 @@ export default function MealPlanner() {
 
   useEffect(() => {
     if (mealMode === "rucak" || mealMode === "oboje") {
-      fetchRecipes(store, excluded, 4, "rucak")
+      fetchRecipes(store, excluded, 4, "rucak", budgetRucak)
         .then((data) => setApiDataRucak(data))
         .catch(() => {});
     }
     if (mealMode === "vecera" || mealMode === "oboje") {
-      fetchRecipes(store, excluded, 4, "vecera")
+      fetchRecipes(store, excluded, 4, "vecera", budgetVecera)
         .then((data) => setApiDataVecera(data))
         .catch(() => {});
     }
-  }, [store, excluded, mealMode]);
+  }, [store, excluded, mealMode, budgetRucak, budgetVecera]);
 
   const discounts = apiDataRucak?.discounts ?? apiDataVecera?.discounts ?? DISCOUNTS[store];
   const storeName = STORES.find((s) => s.key === store).name;
