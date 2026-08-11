@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Plus, Check, Tag, ShoppingCart } from "lucide-react";
+import PrivacyPolicy from "./PrivacyPolicy";
+
+const COOKIE_CONSENT_KEY = "ks_cookie_consent";
 
 const API = "https://meal-planner-api-cq4j.onrender.com";
 
@@ -470,6 +473,28 @@ export default function MealPlanner() {
   const [apiDataRucak, setApiDataRucak] = useState(null);
   const [apiDataVecera, setApiDataVecera] = useState(null);
   const [checkedItems, setCheckedItems] = useState({});
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
+  const [cookieConsent, setCookieConsent] = useState(null);
+
+  // Na prvom renderu pročitaj spremljenu privolu za kolačiće (ako postoji).
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(COOKIE_CONSENT_KEY);
+      if (saved === "accepted" || saved === "declined") setCookieConsent(saved);
+    } catch (e) {
+      /* localStorage nedostupan — banner se svejedno može prikazati */
+    }
+  }, []);
+
+  const handleCookieChoice = (choice) => {
+    setCookieConsent(choice);
+    try {
+      window.localStorage.setItem(COOKIE_CONSENT_KEY, choice);
+    } catch (e) {
+      /* ignoriraj ako pohrana nije dostupna */
+    }
+  };
 
   useEffect(() => {
     if (mealMode === "rucak" || mealMode === "oboje") {
@@ -619,6 +644,10 @@ export default function MealPlanner() {
         })}
       </div>
     );
+  }
+
+  if (showPrivacy) {
+    return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />;
   }
 
   return (
@@ -1346,6 +1375,95 @@ export default function MealPlanner() {
           .mp-shop-item { transition: none; }
           .mp-shop-check { transition: none; }
         }
+
+        /* ── FOOTER ── */
+        .mp-footer {
+          margin-top: 40px;
+          padding: 24px 16px calc(96px + env(safe-area-inset-bottom, 0px));
+          border-top: 1px solid var(--line);
+        }
+        .mp-footer-inner {
+          max-width: 720px;
+          margin: 0 auto;
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          font-size: 13px;
+          color: var(--ink-soft);
+        }
+        .mp-footer-link {
+          background: none;
+          border: none;
+          padding: 0;
+          font: inherit;
+          font-weight: 600;
+          color: var(--green);
+          cursor: pointer;
+        }
+        .mp-footer-link:hover { text-decoration: underline; }
+
+        /* ── COOKIE BANNER ── */
+        .mp-cookie {
+          position: fixed;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+          width: calc(100% - 24px);
+          max-width: 560px;
+          background: var(--ink);
+          color: var(--paper);
+          border-radius: 14px;
+          padding: 16px 18px;
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 12px 16px;
+          z-index: 100;
+        }
+        .mp-cookie-text {
+          margin: 0;
+          flex: 1 1 240px;
+          font-size: 13.5px;
+          line-height: 1.5;
+        }
+        .mp-cookie-inline {
+          background: none;
+          border: none;
+          padding: 0;
+          font: inherit;
+          font-weight: 600;
+          color: var(--amber);
+          cursor: pointer;
+          text-decoration: underline;
+        }
+        .mp-cookie-actions {
+          display: flex;
+          gap: 8px;
+          flex: 0 0 auto;
+        }
+        .mp-cookie-btn {
+          font: inherit;
+          font-weight: 700;
+          font-size: 13.5px;
+          border-radius: 9px;
+          padding: 9px 16px;
+          cursor: pointer;
+          border: 1px solid transparent;
+        }
+        .mp-cookie-accept {
+          background: var(--amber);
+          color: var(--ink);
+        }
+        .mp-cookie-accept:hover { filter: brightness(1.05); }
+        .mp-cookie-decline {
+          background: transparent;
+          color: var(--paper);
+          border-color: rgba(250, 246, 237, 0.35);
+        }
+        .mp-cookie-decline:hover { border-color: var(--paper); }
       `}</style>
 
       {/* ── HEADER ── */}
@@ -1673,6 +1791,51 @@ export default function MealPlanner() {
           )}
         </div>
       </div>
+
+      <footer className="mp-footer">
+        <div className="mp-footer-inner">
+          <span>© {new Date().getFullYear()} Kuhaj štedljivo · Čičak Bau d.o.o.</span>
+          <button
+            type="button"
+            className="mp-footer-link"
+            onClick={() => setShowPrivacy(true)}
+          >
+            Pravila privatnosti
+          </button>
+        </div>
+      </footer>
+
+      {cookieConsent === null && (
+        <div className="mp-cookie" role="dialog" aria-label="Obavijest o kolačićima">
+          <p className="mp-cookie-text">
+            Koristimo samo nužne kolačiće za ispravan rad aplikacije. Više u{" "}
+            <button
+              type="button"
+              className="mp-cookie-inline"
+              onClick={() => setShowPrivacy(true)}
+            >
+              Pravilima privatnosti
+            </button>
+            .
+          </p>
+          <div className="mp-cookie-actions">
+            <button
+              type="button"
+              className="mp-cookie-btn mp-cookie-decline"
+              onClick={() => handleCookieChoice("declined")}
+            >
+              Odbijam
+            </button>
+            <button
+              type="button"
+              className="mp-cookie-btn mp-cookie-accept"
+              onClick={() => handleCookieChoice("accepted")}
+            >
+              Prihvaćam
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
