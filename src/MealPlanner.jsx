@@ -472,6 +472,8 @@ export default function MealPlanner() {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [apiDataRucak, setApiDataRucak] = useState(null);
   const [apiDataVecera, setApiDataVecera] = useState(null);
+  const [loadingRucak, setLoadingRucak] = useState(true);
+  const [loadingVecera, setLoadingVecera] = useState(true);
   const [checkedItems, setCheckedItems] = useState({});
   const [showPrivacy, setShowPrivacy] = useState(false);
   // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
@@ -498,14 +500,18 @@ export default function MealPlanner() {
 
   useEffect(() => {
     if (mealMode === "rucak" || mealMode === "oboje") {
+      setLoadingRucak(true);
       fetchRecipes(store, excluded, 4, "rucak", budgetRucak)
         .then((data) => setApiDataRucak(data))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setLoadingRucak(false));
     }
     if (mealMode === "vecera" || mealMode === "oboje") {
+      setLoadingVecera(true);
       fetchRecipes(store, excluded, 4, "vecera", budgetVecera)
         .then((data) => setApiDataVecera(data))
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setLoadingVecera(false));
     }
   }, [store, excluded, mealMode, budgetRucak, budgetVecera]);
 
@@ -573,7 +579,15 @@ export default function MealPlanner() {
   const toggleExcluded = (tag) =>
     setExcluded((ex) => (ex.includes(tag) ? ex.filter((x) => x !== tag) : [...ex, tag]));
 
-  function renderRecipeList(visibleRecipes, plan, togglePlan, expanded, toggleExpand) {
+  function renderRecipeList(visibleRecipes, plan, togglePlan, expanded, toggleExpand, loading) {
+    if (loading) {
+      return (
+        <div className="mp-loading" role="status" aria-live="polite">
+          <span className="mp-spinner" aria-hidden="true" />
+          <span className="mp-loading-text">Učitavamo recepte...</span>
+        </div>
+      );
+    }
     if (visibleRecipes.length === 0) {
       return (
         <div className="mp-empty">
@@ -1376,6 +1390,39 @@ export default function MealPlanner() {
           .mp-shop-check { transition: none; }
         }
 
+        /* ── LOADING SPINNER ── */
+        .mp-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          padding: 56px 20px;
+          text-align: center;
+        }
+        .mp-spinner {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          border: 4px solid var(--amber-soft);
+          border-top-color: var(--amber);
+          animation: mp-spin 0.8s linear infinite;
+        }
+        .mp-loading-text {
+          font-family: 'Oswald', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 1.5px;
+          font-size: 16px;
+          color: var(--ink);
+        }
+        @keyframes mp-spin {
+          to { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .mp-spinner { animation-duration: 1.6s; }
+        }
+
         /* ── FOOTER ── */
         .mp-footer {
           margin-top: 40px;
@@ -1602,12 +1649,12 @@ export default function MealPlanner() {
                 <span className="mp-meal-divider-title">Ručak</span>
                 <span className="mp-meal-divider-line" />
               </div>
-              {renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak)}
+              {renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak, loadingRucak)}
               <div className="mp-meal-divider">
                 <span className="mp-meal-divider-title">Večera</span>
                 <span className="mp-meal-divider-line" />
               </div>
-              {renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera)}
+              {renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera, loadingVecera)}
             </>
           ) : (
             <>
@@ -1616,8 +1663,8 @@ export default function MealPlanner() {
                 Prijedlozi jela
               </div>
               {mealMode === "vecera"
-                ? renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera)
-                : renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak)
+                ? renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera, loadingVecera)
+                : renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak, loadingRucak)
               }
             </>
           )}
