@@ -4,6 +4,21 @@ import PrivacyPolicy from "./PrivacyPolicy";
 
 const COOKIE_CONSENT_KEY = "ks_cookie_consent";
 
+// Ključ pod kojim se sve korisničke postavke spremaju u localStorage.
+const SETTINGS_KEY = "ks_settings";
+
+// Učitaj spremljene postavke (jednom, pri pokretanju). Vrati prazan objekt
+// ako pohrana nije dostupna ili je sadržaj neispravan.
+function loadSettings() {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (e) {
+    return {};
+  }
+}
+
 const API = "https://meal-planner-api-cq4j.onrender.com";
 
 async function fetchRecipes(store, exclude, servings, meal, budget) {
@@ -460,13 +475,21 @@ function computeRecipe(recipe, discounts) {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MealPlanner() {
-  const [store, setStore] = useState("konzum");
-  const [mealMode, setMealMode] = useState("rucak");
-  const [budgetRucak, setBudgetRucak] = useState(45);
-  const [budgetVecera, setBudgetVecera] = useState(45);
-  const [excluded, setExcluded] = useState([]);
-  const [planRucak, setPlanRucak] = useState([]);
-  const [planVecera, setPlanVecera] = useState([]);
+  // Spremljene postavke iz localStorage — pročitane jednom pri pokretanju.
+  const [saved] = useState(loadSettings);
+
+  const validStore = (v) => (STORES.some((s) => s.key === v) ? v : "konzum");
+  const validMode = (v) => (MEAL_MODES.some((m) => m.key === v) ? v : "rucak");
+  const validBudget = (v) => (Number.isFinite(v) && v > 0 ? v : 45);
+  const validList = (v) => (Array.isArray(v) ? v : []);
+
+  const [store, setStore] = useState(() => validStore(saved.store));
+  const [mealMode, setMealMode] = useState(() => validMode(saved.mealMode));
+  const [budgetRucak, setBudgetRucak] = useState(() => validBudget(saved.budgetRucak));
+  const [budgetVecera, setBudgetVecera] = useState(() => validBudget(saved.budgetVecera));
+  const [excluded, setExcluded] = useState(() => validList(saved.excluded));
+  const [planRucak, setPlanRucak] = useState(() => validList(saved.planRucak));
+  const [planVecera, setPlanVecera] = useState(() => validList(saved.planVecera));
   const [expandedRucak, setExpandedRucak] = useState(null);
   const [expandedVecera, setExpandedVecera] = useState(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -514,6 +537,26 @@ export default function MealPlanner() {
         .finally(() => setLoadingVecera(false));
     }
   }, [store, excluded, mealMode, budgetRucak, budgetVecera]);
+
+  // Spremi sve korisničke postavke u localStorage svaki put kad se promijene.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({
+          store,
+          mealMode,
+          budgetRucak,
+          budgetVecera,
+          excluded,
+          planRucak,
+          planVecera,
+        })
+      );
+    } catch (e) {
+      /* pohrana nedostupna (npr. privatni način) — tiho ignoriraj */
+    }
+  }, [store, mealMode, budgetRucak, budgetVecera, excluded, planRucak, planVecera]);
 
   const discounts = apiDataRucak?.discounts ?? apiDataVecera?.discounts ?? DISCOUNTS[store];
   const storeName = STORES.find((s) => s.key === store).name;
