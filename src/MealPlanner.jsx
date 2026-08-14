@@ -532,22 +532,6 @@ export default function MealPlanner() {
   const [checkedItems, setCheckedItems] = useState({});
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
-  const [headerHidden, setHeaderHidden] = useState(false);
-
-  // Header se skriva pri scrollanju prema dolje, a vraća pri scrollanju gore.
-  // CSS transform je ograničen na < 768px pa na desktopu nema efekta.
-  useEffect(() => {
-    let lastY = window.scrollY;
-    const onScroll = () => {
-      const y = window.scrollY;
-      if (y < 12) setHeaderHidden(false);
-      else if (y > lastY + 6) setHeaderHidden(true);
-      else if (y < lastY - 6) setHeaderHidden(false);
-      lastY = y;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
   // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
   const [cookieConsent, setCookieConsent] = useState(null);
 
@@ -608,7 +592,6 @@ export default function MealPlanner() {
   }, [store, mealMode, budgetRucak, budgetVecera, excluded, planRucak, planVecera]);
 
   const discounts = apiDataRucak?.discounts ?? apiDataVecera?.discounts ?? DISCOUNTS[store];
-  const storeName = STORES.find((s) => s.key === store).name;
 
   const allRecipesRucak = apiDataRucak?.recipes ?? RECIPES.map((r) => computeRecipe(r, discounts));
   const allRecipesVecera = apiDataVecera?.recipes ?? RECIPES.map((r) => computeRecipe(r, discounts));
@@ -869,14 +852,6 @@ export default function MealPlanner() {
           background: var(--paper);
           z-index: 10;
           border-bottom: 1px solid var(--line);
-          transition: transform 0.28s ease;
-          will-change: transform;
-        }
-        /* Skrivanje headera pri scrollu prema dolje — samo na mobilnom (< 768px). */
-        @media (max-width: 767px) {
-          .mp-header.hidden {
-            transform: translateY(-100%);
-          }
         }
         .mp-eyebrow {
           font-family: 'Space Mono', monospace;
@@ -1873,7 +1848,7 @@ export default function MealPlanner() {
       `}</style>
 
       {/* ── HEADER ── */}
-      <header className={`mp-header ${headerHidden ? "hidden" : ""}`}>
+      <header className="mp-header">
         <div className="mp-eyebrow">Tjedni planer obroka</div>
         <h1 className="mp-title">Kuhaj štedljivo</h1>
 
@@ -1972,30 +1947,6 @@ export default function MealPlanner() {
               >
                 {f.label}
               </button>
-            ))}
-          </div>
-        </section>
-
-        {/* Discounts */}
-        <section className="mp-section">
-          <div className="mp-section-label">
-            <span className="mp-dot" />
-            Akcije ovog tjedna — {storeName}
-          </div>
-          <div className="mp-tags-row">
-            {discounts.map((d) => (
-              <div className="mp-tag" key={d.id}>
-                <span className="mp-tag-hole" />
-                <div className="mp-tag-name">{d.name}</div>
-                <div className="mp-tag-unit">{d.unit}</div>
-                <div className="mp-tag-prices">
-                  <span className="mp-tag-old">{fmt(d.old)}</span>
-                  <span className="mp-tag-new">{fmt(d.new)}</span>
-                </div>
-                <div className="mp-tag-badge">
-                  −{Math.round((1 - d.new / d.old) * 100)}%
-                </div>
-              </div>
             ))}
           </div>
         </section>
