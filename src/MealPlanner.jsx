@@ -956,13 +956,37 @@ export default function MealPlanner() {
           gap: 28px;
           align-items: start;
         }
+        /* Svaki stupac ima vlastiti scroll i fiksnu visinu → neovisni scrollbari. */
         .mp-meal-col {
           min-width: 0;
+          height: calc(100vh - 300px);
+          overflow-y: auto;
+          padding-right: 8px;
+        }
+        /* Naslov (RUČAK / VEČERA) ostaje zalijepljen na vrhu svog stupca. */
+        .mp-meal-col .mp-meal-divider {
+          position: sticky;
+          top: 0;
+          z-index: 5;
+          background: var(--paper);
+          padding: 6px 0 10px;
+          margin-bottom: 8px;
         }
         @media (max-width: 599px) {
           .mp-meal-cols {
             grid-template-columns: 1fr;
             gap: 0;
+          }
+          /* Na mobilnom: prirodni tok, bez fiksne visine i neovisnog scrolla. */
+          .mp-meal-col {
+            height: auto;
+            overflow: visible;
+            padding-right: 0;
+          }
+          .mp-meal-col .mp-meal-divider {
+            position: static;
+            padding: 0;
+            margin-bottom: 16px;
           }
           /* Razmak između Ručka i Večere kad su jedan ispod drugog. */
           .mp-meal-col + .mp-meal-col {
