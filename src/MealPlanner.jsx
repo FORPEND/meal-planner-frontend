@@ -319,120 +319,152 @@ function parseAmount(str) {
   return { value: val, unit: u };
 }
 
-function fmtQty(totalG, totalMl, totalKom) {
-  if (totalG > 0) {
-    if (totalG >= 1000) {
-      const kg = totalG / 1000;
+// Formatira jednu količinu u zadanoj baznoj jedinici (g / ml / kom) u
+// čitljiv oblik (npr. 1500 g → "1.5 kg", 400 g → "400 g").
+function fmtOne(value, unit) {
+  if (unit === "g") {
+    if (value >= 1000) {
+      const kg = value / 1000;
       return (Number.isInteger(kg) ? kg : parseFloat(kg.toFixed(1))) + " kg";
     }
-    return Math.round(totalG) + " g";
+    return Math.round(value) + " g";
   }
-  if (totalMl > 0) {
-    if (totalMl >= 1000) {
-      const l = totalMl / 1000;
+  if (unit === "ml") {
+    if (value >= 1000) {
+      const l = value / 1000;
       return (Number.isInteger(l) ? l : parseFloat(l.toFixed(1))) + " L";
     }
-    return Math.round(totalMl) + " ml";
+    return Math.round(value) + " ml";
   }
-  return Math.round(totalKom) + " kom";
+  return Math.round(value) + " kom";
+}
+
+// Pribraja količinu jednog sastojka u bazne jedinice (g / ml / kom).
+// API odgovor ima quantity (u kg/L/kom) + unit; lokalni fallback ima amount
+// string ("500 g"). Vraća true ako je uspio pribrojiti mjerljivu količinu.
+function addQuantity(bucket, ing) {
+  if (ing.quantity !== undefined && ing.unit) {
+    if (ing.unit === "g") bucket.totalG += (ing.quantity || 0) * 1000;
+    else if (ing.unit === "ml") bucket.totalMl += (ing.quantity || 0) * 1000;
+    else bucket.totalKom += ing.quantity || 0;
+    return true;
+  }
+  const parsed = parseAmount(ing.amount);
+  if (parsed) {
+    if (parsed.unit === "g") bucket.totalG += parsed.value;
+    else if (parsed.unit === "ml") bucket.totalMl += parsed.value;
+    else bucket.totalKom += parsed.value;
+    return true;
+  }
+  return false;
 }
 
 /**
- * Returns { dept: [{ key, productName, productUnit, neededStr, packages, totalPrice, hasAkcija }] }
+ * Gradi shopping listu grupiranu po odjelu. Za svaku namirnicu:
+ *  1. zbraja potrebnu količinu kroz SVE odabrane obroke (ručak + večera),
+ *  2. za namirnice s pokrivenošću u dućanu bira dostupno (akcijsko) pakiranje,
+ *  3. zaokružuje broj pakiranja s Math.ceil da pokrije potrebnu količinu,
+ *  4. računa koliko ostaje viška ("za sljedeći tjedan"),
+ *  5. namirnice bez matcha u dućanu (sol, začini…) prikazuje kao procjenu bez pakiranja.
+ *
+ * Item: { key, dept, productName, neededStr, hasPackage, packageStr, packages,
+ *         packagePrice, totalPrice, leftoverStr, hasAkcija }
  */
 function buildShoppingList(planRecipes, discounts) {
-  // category key → aggregated totals
-  const grouped = {};
-  // name → count (for null-category ingredients like oil, spices)
-  const noCategory = {};
+  const matched = {}; // category → { productName, totals…, storeProduct }
+  const unmatched = {}; // key → { name, dept, totals…, count }
 
   planRecipes.forEach((recipe) => {
     recipe.ingredients.forEach((ing) => {
-      if (!ing.category) {
-        const k = ing.name;
-        noCategory[k] = (noCategory[k] || 0) + 1;
+      const storeProduct = ing.category
+        ? discounts.find((d) => d.category === ing.category) || null
+        : null;
+
+      // Bez kategorije ili bez pokrivenosti u dućanu → procjena bez pakiranja.
+      if (!storeProduct) {
+        const key = ing.category ? `cat-${ing.category}` : `nc-${ing.name}`;
+        if (!unmatched[key]) {
+          unmatched[key] = {
+            name: ing.name,
+            dept: DEPT_MAP[ing.category] || "Ostalo",
+            totalG: 0,
+            totalMl: 0,
+            totalKom: 0,
+            count: 0,
+          };
+        }
+        if (!addQuantity(unmatched[key], ing)) unmatched[key].count += 1;
         return;
       }
 
-      if (!grouped[ing.category]) {
-        grouped[ing.category] = {
-          ingredientName: ing.name,
+      if (!matched[ing.category]) {
+        matched[ing.category] = {
+          productName: storeProduct.name,
           totalG: 0,
           totalMl: 0,
           totalKom: 0,
-          storeProduct: discounts.find((d) => d.category === ing.category) || null,
+          storeProduct,
         };
       }
-
-      const g = grouped[ing.category];
-
-      // API response has quantity (kg/L) + unit string; fallback has amount string
-      if (ing.quantity !== undefined && ing.unit) {
-        if (ing.unit === "g") g.totalG += (ing.quantity || 0) * 1000;
-        else if (ing.unit === "ml") g.totalMl += (ing.quantity || 0) * 1000;
-        else g.totalKom += ing.quantity || 0;
-      } else {
-        const parsed = parseAmount(ing.amount);
-        if (parsed) {
-          if (parsed.unit === "g") g.totalG += parsed.value;
-          else if (parsed.unit === "ml") g.totalMl += parsed.value;
-          else g.totalKom += parsed.value;
-        }
-      }
+      addQuantity(matched[ing.category], ing);
     });
   });
 
-  // Build flat item list
   const items = [];
 
-  Object.entries(grouped).forEach(([cat, info]) => {
-    const { ingredientName, totalG, totalMl, totalKom, storeProduct } = info;
-    const neededStr = fmtQty(totalG, totalMl, totalKom);
-
-    // Determine dominant unit for package calculation
+  Object.entries(matched).forEach(([cat, info]) => {
+    const { productName, totalG, totalMl, totalKom, storeProduct } = info;
     const dominantUnit = totalG > 0 ? "g" : totalMl > 0 ? "ml" : "kom";
     const totalNeeded = totalG > 0 ? totalG : totalMl > 0 ? totalMl : totalKom;
 
+    // Dostupno pakiranje u dućanu (akcijsko se preferira jer dolazi iz akcija).
+    const pkg = parseAmount(storeProduct.unit);
     let packages = 1;
-    let productName = ingredientName;
-    let productUnit = "";
-    let totalPrice = null;
-    let hasAkcija = false;
-
-    if (storeProduct) {
-      productName = storeProduct.name;
-      productUnit = storeProduct.unit;
-      hasAkcija = true;
-
-      const pkgParsed = parseAmount(storeProduct.unit);
-      if (pkgParsed && pkgParsed.unit === dominantUnit && pkgParsed.value > 0) {
-        packages = Math.ceil(totalNeeded / pkgParsed.value);
-      }
-      totalPrice = storeProduct.new * packages;
+    let leftoverStr = null;
+    if (pkg && pkg.unit === dominantUnit && pkg.value > 0) {
+      packages = Math.max(1, Math.ceil(totalNeeded / pkg.value));
+      const leftover = packages * pkg.value - totalNeeded;
+      if (leftover > 0) leftoverStr = "~" + fmtOne(leftover, dominantUnit);
     }
 
     items.push({
       key: cat,
       dept: DEPT_MAP[cat] || "Ostalo",
       productName,
-      productUnit,
-      neededStr,
+      neededStr: fmtOne(totalNeeded, dominantUnit),
+      hasPackage: true,
+      packageStr: storeProduct.unit.replace(/\s+/g, ""),
       packages,
-      totalPrice,
-      hasAkcija,
+      packagePrice: storeProduct.new,
+      totalPrice: storeProduct.new * packages,
+      leftoverStr,
+      hasAkcija: true,
     });
   });
 
-  // Null-category ingredients → Ostalo
-  Object.entries(noCategory).forEach(([name, count]) => {
+  // Namirnice bez matcha u dućanu → procijenjena količina, bez pakiranja/cijene.
+  Object.entries(unmatched).forEach(([key, info]) => {
+    const hasQty = info.totalG > 0 || info.totalMl > 0 || info.totalKom > 0;
+    const dominantUnit = info.totalG > 0 ? "g" : info.totalMl > 0 ? "ml" : "kom";
+    const totalNeeded =
+      info.totalG > 0 ? info.totalG : info.totalMl > 0 ? info.totalMl : info.totalKom;
+    const neededStr = hasQty
+      ? "~" + fmtOne(totalNeeded, dominantUnit)
+      : info.count > 1
+      ? `${info.count}×`
+      : "po potrebi";
+
     items.push({
-      key: `nc-${name}`,
-      dept: "Ostalo",
-      productName: name,
-      productUnit: "",
-      neededStr: count > 1 ? `${count}×` : "",
-      packages: count,
+      key,
+      dept: info.dept,
+      productName: info.name,
+      neededStr,
+      hasPackage: false,
+      packageStr: "",
+      packages: 1,
+      packagePrice: null,
       totalPrice: null,
+      leftoverStr: null,
       hasAkcija: false,
     });
   });
@@ -1284,6 +1316,10 @@ export default function MealPlanner() {
           margin-left: 4px;
           vertical-align: middle;
         }
+        .mp-shop-left {
+          color: var(--green);
+          font-weight: 700;
+        }
         .mp-shop-price {
           font-family: 'Space Mono', monospace;
           font-size: 12px;
@@ -1752,13 +1788,20 @@ export default function MealPlanner() {
                         <div className="mp-shop-info">
                           <div className="mp-shop-name">{item.productName}</div>
                           <div className="mp-shop-detail">
-                            Trebaš: {item.neededStr}
-                            {item.productUnit && (
+                            Trebaš {item.neededStr}
+                            {item.hasPackage && (
                               <>
-                                {" "}·{" "}
+                                {" · "}
                                 <span className="mp-shop-pkg">
-                                  {item.packages}× {item.productUnit}
+                                  Kupi {item.packages}× {item.packageStr} (
+                                  {item.packages > 1 ? `${item.packages}× ` : ""}
+                                  {fmt(item.packagePrice)})
                                 </span>
+                                {item.leftoverStr && (
+                                  <span className="mp-shop-left">
+                                    {" · "}Ostaje {item.leftoverStr}
+                                  </span>
+                                )}
                               </>
                             )}
                           </div>
