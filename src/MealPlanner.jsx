@@ -1502,35 +1502,6 @@ export default function MealPlanner() {
         }
         .mp-shop-price.akcija { color: #7A5520; }
 
-        /* ── "Popis za dućan" gumb ── */
-        .mp-shop-open-btn {
-          width: 100%;
-          min-height: 52px;
-          margin-top: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          background: var(--amber);
-          color: var(--ink);
-          border: 2px solid var(--ink);
-          border-radius: 10px;
-          font-family: 'Oswald', sans-serif;
-          font-weight: 700;
-          font-size: 16px;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          cursor: pointer;
-        }
-        .mp-shop-open-total {
-          font-family: 'Space Mono', monospace;
-          font-size: 14px;
-          background: var(--ink);
-          color: var(--paper);
-          padding: 3px 8px;
-          border-radius: 6px;
-        }
-
         /* ── Fullscreen popis za dućan ── */
         .mp-shop-fs {
           position: fixed;
@@ -1639,23 +1610,35 @@ export default function MealPlanner() {
         }
         .mp-receipt-summary {
           display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 14px 20px;
+          flex-direction: column;
+          gap: 8px;
+          padding: 12px 20px 14px;
         }
-        .mp-receipt-text { flex: 1; min-width: 0; }
+        .mp-receipt-row1 {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+        .mp-receipt-row2 {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
         .mp-receipt-label {
           font-family: 'Space Mono', monospace;
           font-size: 10px;
           letter-spacing: 0.12em;
           text-transform: uppercase;
           color: var(--ink-soft);
-          margin-bottom: 2px;
         }
         .mp-receipt-total {
           font-family: 'Oswald', sans-serif;
           font-size: 19px;
           font-weight: 700;
+          white-space: nowrap;
+          min-width: 0;
         }
         .mp-receipt-budget {
           font-family: 'Space Mono', monospace;
@@ -1663,13 +1646,31 @@ export default function MealPlanner() {
           color: var(--ink-soft);
           font-weight: 400;
         }
+        .mp-receipt-shop-btn {
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 40px;
+          padding: 8px 14px;
+          background: var(--amber);
+          color: var(--ink);
+          border: 2px solid var(--ink);
+          border-radius: 8px;
+          font-family: 'Space Mono', monospace;
+          font-weight: 700;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          white-space: nowrap;
+          cursor: pointer;
+        }
         .mp-receipt-bar {
-          width: 70px;
+          width: 100%;
           height: 6px;
           background: var(--line);
           border-radius: 999px;
           overflow: hidden;
-          flex-shrink: 0;
         }
         .mp-receipt-bar-fill {
           height: 100%;
@@ -2036,17 +2037,6 @@ export default function MealPlanner() {
           Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
           dolaze iz stvarnih kataloga navedenih dućana.
         </p>
-
-        {/* Gumb za otvaranje fullscreen popisa za dućan */}
-        {shoppingList && (
-          <button className="mp-shop-open-btn" onClick={() => setShopOpen(true)}>
-            <ShoppingCart size={18} />
-            Popis za dućan
-            {shoppingTotal > 0 && (
-              <span className="mp-shop-open-total">{fmt(shoppingTotal)}</span>
-            )}
-          </button>
-        )}
       </main>
 
       {/* ── FULLSCREEN POPIS ZA DUĆAN ── */}
@@ -2072,8 +2062,17 @@ export default function MealPlanner() {
       <div className="mp-receipt">
         <div className="mp-receipt-inner">
           <div className="mp-receipt-summary">
-            <div className="mp-receipt-text">
+            <div className="mp-receipt-row1">
               <div className="mp-receipt-label">Tjedni plan · {receiptCount} jela</div>
+              <button
+                className="mp-receipt-toggle"
+                onClick={() => setReceiptOpen((o) => !o)}
+                aria-label={receiptOpen ? "Sakrij stavke plana" : "Prikaži stavke plana"}
+              >
+                {receiptOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              </button>
+            </div>
+            <div className="mp-receipt-row2">
               <div
                 className="mp-receipt-total"
                 style={{ color: overBudget ? "var(--red)" : "var(--ink)" }}
@@ -2081,6 +2080,15 @@ export default function MealPlanner() {
                 {fmt(receiptTotal)}{" "}
                 <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
               </div>
+              {shoppingList && (
+                <button
+                  className="mp-receipt-shop-btn"
+                  onClick={() => setShopOpen(true)}
+                >
+                  <ShoppingCart size={14} />
+                  Popis za dućan
+                </button>
+              )}
             </div>
             <div className="mp-receipt-bar">
               <div
@@ -2091,13 +2099,6 @@ export default function MealPlanner() {
                 }}
               />
             </div>
-            <button
-              className="mp-receipt-toggle"
-              onClick={() => setReceiptOpen((o) => !o)}
-              aria-label={receiptOpen ? "Sakrij stavke plana" : "Prikaži stavke plana"}
-            >
-              {receiptOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
-            </button>
           </div>
 
           {receiptOpen && (
