@@ -531,6 +531,7 @@ export default function MealPlanner() {
   const [loadingVecera, setLoadingVecera] = useState(true);
   const [checkedItems, setCheckedItems] = useState({});
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
   const [cookieConsent, setCookieConsent] = useState(null);
 
@@ -733,6 +734,72 @@ export default function MealPlanner() {
         })}
       </div>
     );
+  }
+
+  // Zajednički prikaz namirnica grupiranih po odjelu (koristi fullscreen popis).
+  function renderShoppingGroups() {
+    if (!shoppingList) return null;
+    return DEPT_ORDER.map((dept) => {
+      const items = shoppingList[dept];
+      if (!items || items.length === 0) return null;
+      return (
+        <div className="mp-shop-dept" key={dept}>
+          <div className="mp-shop-dept-header">
+            <span className="mp-shop-dept-name">{dept}</span>
+            <span className="mp-shop-dept-line" />
+          </div>
+          {items.map((item) => {
+            const checked = !!checkedItems[item.key];
+            return (
+              <div
+                key={item.key}
+                className={`mp-shop-item ${checked ? "checked" : ""}`}
+                onClick={() => toggleChecked(item.key)}
+                role="checkbox"
+                aria-checked={checked}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleChecked(item.key);
+                  }
+                }}
+              >
+                <div className="mp-shop-check">
+                  {checked && <Check size={12} strokeWidth={3} />}
+                </div>
+                <div className="mp-shop-info">
+                  <div className="mp-shop-name">{item.productName}</div>
+                  <div className="mp-shop-detail">
+                    Trebaš {item.neededStr}
+                    {item.hasPackage && (
+                      <>
+                        {" · "}
+                        <span className="mp-shop-pkg">
+                          Kupi {item.packages}× {item.packageStr} (
+                          {item.packages > 1 ? `${item.packages}× ` : ""}
+                          {fmt(item.packagePrice)})
+                        </span>
+                        {item.leftoverStr && (
+                          <span className="mp-shop-left">
+                            {" · "}Ostaje {item.leftoverStr}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                {item.totalPrice !== null && (
+                  <div className={`mp-shop-price ${item.hasAkcija ? "akcija" : ""}`}>
+                    {fmt(item.totalPrice)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    });
   }
 
   if (showPrivacy) {
@@ -985,25 +1052,13 @@ export default function MealPlanner() {
           padding: 6px 0 10px;
           margin-bottom: 8px;
         }
+        /* Dva stupca ostaju side-by-side i na mobitelu — samo se stisne razmak. */
         @media (max-width: 767px) {
           .mp-meal-cols {
-            grid-template-columns: 1fr;
-            gap: 0;
+            gap: 12px;
           }
-          /* Na mobilnom: prirodni tok, bez fiksne visine i neovisnog scrolla. */
           .mp-meal-col {
-            height: auto;
-            overflow: visible;
-            padding-right: 0;
-          }
-          .mp-meal-col .mp-meal-divider {
-            position: static;
-            padding: 0;
-            margin-bottom: 16px;
-          }
-          /* Razmak između Ručka i Večere kad su jedan ispod drugog. */
-          .mp-meal-col + .mp-meal-col {
-            margin-top: 32px;
+            padding-right: 4px;
           }
         }
 
@@ -1404,6 +1459,99 @@ export default function MealPlanner() {
           min-width: 52px;
         }
         .mp-shop-price.akcija { color: #7A5520; }
+
+        /* ── "Popis za dućan" gumb ── */
+        .mp-shop-open-btn {
+          width: 100%;
+          min-height: 52px;
+          margin-top: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          background: var(--amber);
+          color: var(--ink);
+          border: 2px solid var(--ink);
+          border-radius: 10px;
+          font-family: 'Oswald', sans-serif;
+          font-weight: 700;
+          font-size: 16px;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          cursor: pointer;
+        }
+        .mp-shop-open-total {
+          font-family: 'Space Mono', monospace;
+          font-size: 14px;
+          background: var(--ink);
+          color: var(--paper);
+          padding: 3px 8px;
+          border-radius: 6px;
+        }
+
+        /* ── Fullscreen popis za dućan ── */
+        .mp-shop-fs {
+          position: fixed;
+          inset: 0;
+          z-index: 200;
+          background: var(--paper);
+          display: flex;
+          flex-direction: column;
+        }
+        .mp-shop-fs-head {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 16px 20px;
+          padding-top: calc(16px + env(safe-area-inset-top, 0px));
+          border-bottom: 2px solid var(--ink);
+          background: var(--paper-2);
+        }
+        .mp-shop-fs-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: 'Oswald', sans-serif;
+          font-weight: 700;
+          font-size: 18px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          min-width: 0;
+        }
+        .mp-shop-fs-total {
+          font-family: 'Space Mono', monospace;
+          font-size: 13px;
+          background: var(--amber);
+          color: var(--ink);
+          padding: 3px 8px;
+          border-radius: 6px;
+        }
+        .mp-shop-fs-close {
+          flex-shrink: 0;
+          min-height: 44px;
+          padding: 8px 18px;
+          background: var(--ink);
+          color: var(--paper);
+          border: none;
+          border-radius: 8px;
+          font-family: 'Space Mono', monospace;
+          font-weight: 700;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+        }
+        .mp-shop-fs-body {
+          flex: 1;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+          width: 100%;
+          max-width: 640px;
+          margin: 0 auto;
+        }
 
         /* ── Misc ── */
         .mp-note {
@@ -1842,82 +1990,41 @@ export default function MealPlanner() {
           )}
         </section>
 
-        {/* Shopping list */}
-        {shoppingList && (
-          <section className="mp-section">
-            <div className="mp-shop-header">
-              <div className="mp-section-label" style={{ margin: 0 }}>
-                <span className="mp-dot" style={{ background: "var(--amber)" }} />
-                <ShoppingCart size={14} style={{ marginLeft: 2, marginRight: -2 }} />
-                Shopping lista
-              </div>
-              {shoppingTotal > 0 && (
-                <span className="mp-shop-total">{fmt(shoppingTotal)}</span>
-              )}
-            </div>
-
-            {DEPT_ORDER.map((dept) => {
-              const items = shoppingList[dept];
-              if (!items || items.length === 0) return null;
-              return (
-                <div className="mp-shop-dept" key={dept}>
-                  <div className="mp-shop-dept-header">
-                    <span className="mp-shop-dept-name">{dept}</span>
-                    <span className="mp-shop-dept-line" />
-                  </div>
-                  {items.map((item) => {
-                    const checked = !!checkedItems[item.key];
-                    return (
-                      <div
-                        key={item.key}
-                        className={`mp-shop-item ${checked ? "checked" : ""}`}
-                        onClick={() => toggleChecked(item.key)}
-                        role="checkbox"
-                        aria-checked={checked}
-                      >
-                        <div className="mp-shop-check">
-                          {checked && <Check size={12} strokeWidth={3} />}
-                        </div>
-                        <div className="mp-shop-info">
-                          <div className="mp-shop-name">{item.productName}</div>
-                          <div className="mp-shop-detail">
-                            Trebaš {item.neededStr}
-                            {item.hasPackage && (
-                              <>
-                                {" · "}
-                                <span className="mp-shop-pkg">
-                                  Kupi {item.packages}× {item.packageStr} (
-                                  {item.packages > 1 ? `${item.packages}× ` : ""}
-                                  {fmt(item.packagePrice)})
-                                </span>
-                                {item.leftoverStr && (
-                                  <span className="mp-shop-left">
-                                    {" · "}Ostaje {item.leftoverStr}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        {item.totalPrice !== null && (
-                          <div className={`mp-shop-price ${item.hasAkcija ? "akcija" : ""}`}>
-                            {fmt(item.totalPrice)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </section>
-        )}
-
         <p className="mp-note">
           Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
           dolaze iz stvarnih kataloga navedenih dućana.
         </p>
+
+        {/* Gumb za otvaranje fullscreen popisa za dućan */}
+        {shoppingList && (
+          <button className="mp-shop-open-btn" onClick={() => setShopOpen(true)}>
+            <ShoppingCart size={18} />
+            Popis za dućan
+            {shoppingTotal > 0 && (
+              <span className="mp-shop-open-total">{fmt(shoppingTotal)}</span>
+            )}
+          </button>
+        )}
       </main>
+
+      {/* ── FULLSCREEN POPIS ZA DUĆAN ── */}
+      {shopOpen && shoppingList && (
+        <div className="mp-shop-fs" role="dialog" aria-label="Popis za dućan">
+          <div className="mp-shop-fs-head">
+            <div className="mp-shop-fs-title">
+              <ShoppingCart size={20} />
+              Popis za dućan
+              {shoppingTotal > 0 && (
+                <span className="mp-shop-fs-total">{fmt(shoppingTotal)}</span>
+              )}
+            </div>
+            <button className="mp-shop-fs-close" onClick={() => setShopOpen(false)}>
+              Zatvori
+            </button>
+          </div>
+          <div className="mp-shop-fs-body">{renderShoppingGroups()}</div>
+        </div>
+      )}
 
       {/* ── BOTTOM RECEIPT ── */}
       <div className="mp-receipt">
