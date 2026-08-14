@@ -947,6 +947,29 @@ export default function MealPlanner() {
           flex-shrink: 0;
         }
 
+        /* ── Meal columns (oboje mode) ── */
+        /* Dva stupca (Ručak | Večera) na širim ekranima, jedan ispod drugog
+           na mobilnom (< 600px). */
+        .mp-meal-cols {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 28px;
+          align-items: start;
+        }
+        .mp-meal-col {
+          min-width: 0;
+        }
+        @media (max-width: 599px) {
+          .mp-meal-cols {
+            grid-template-columns: 1fr;
+            gap: 0;
+          }
+          /* Razmak između Ručka i Večere kad su jedan ispod drugog. */
+          .mp-meal-col + .mp-meal-col {
+            margin-top: 32px;
+          }
+        }
+
         /* ── Meal dividers (oboje mode) ── */
         .mp-meal-divider {
           display: flex;
@@ -1723,18 +1746,22 @@ export default function MealPlanner() {
         {/* Recipe lists */}
         <section className="mp-section">
           {mealMode === "oboje" ? (
-            <>
-              <div className="mp-meal-divider">
-                <span className="mp-meal-divider-title">Ručak</span>
-                <span className="mp-meal-divider-line" />
+            <div className="mp-meal-cols">
+              <div className="mp-meal-col">
+                <div className="mp-meal-divider">
+                  <span className="mp-meal-divider-title">Ručak</span>
+                  <span className="mp-meal-divider-line" />
+                </div>
+                {renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak, loadingRucak)}
               </div>
-              {renderRecipeList(visibleRecipesRucak, planRucak, togglePlanRucak, expandedRucak, toggleExpandRucak, loadingRucak)}
-              <div className="mp-meal-divider">
-                <span className="mp-meal-divider-title">Večera</span>
-                <span className="mp-meal-divider-line" />
+              <div className="mp-meal-col">
+                <div className="mp-meal-divider">
+                  <span className="mp-meal-divider-title">Večera</span>
+                  <span className="mp-meal-divider-line" />
+                </div>
+                {renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera, loadingVecera)}
               </div>
-              {renderRecipeList(visibleRecipesVecera, planVecera, togglePlanVecera, expandedVecera, toggleExpandVecera, loadingVecera)}
-            </>
+            </div>
           ) : (
             <>
               <div className="mp-section-label">
