@@ -821,6 +821,7 @@ export default function MealPlanner() {
         }
         .mp-meal-row button {
           flex: 1;
+          min-height: 44px;
           font-family: 'Space Mono', monospace;
           font-size: 11px;
           font-weight: 700;
@@ -831,6 +832,7 @@ export default function MealPlanner() {
           color: var(--ink);
           text-transform: uppercase;
           letter-spacing: 0.06em;
+          cursor: pointer;
         }
         .mp-meal-row button.active {
           background: var(--ink);
@@ -854,10 +856,12 @@ export default function MealPlanner() {
           display: flex;
           gap: 8px;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
           padding: 2px 2px 4px;
         }
         .mp-store-row button {
           flex: 0 0 auto;
+          min-height: 44px;
           font-family: 'Space Mono', monospace;
           font-size: 11px;
           font-weight: 700;
@@ -869,6 +873,7 @@ export default function MealPlanner() {
           text-transform: uppercase;
           letter-spacing: 0.04em;
           white-space: nowrap;
+          cursor: pointer;
         }
         .mp-store-row button.active {
           background: var(--ink);
@@ -883,23 +888,31 @@ export default function MealPlanner() {
           flex: 1;
           -webkit-appearance: none;
           appearance: none;
+          height: 24px;
+          background: transparent;
+          outline: none;
+          /* Horizontalni potez pomiče klizač, vertikalni i dalje scrolla stranicu. */
+          touch-action: pan-y;
+          cursor: pointer;
+        }
+        .mp-budget-row input[type=range]::-webkit-slider-runnable-track {
           height: 4px;
           background: var(--line);
           border-radius: 2px;
-          outline: none;
         }
         .mp-budget-row input[type=range]::-webkit-slider-thumb {
           -webkit-appearance: none;
-          width: 18px;
-          height: 18px;
+          width: 24px;
+          height: 24px;
+          margin-top: -10px;
           border-radius: 50%;
           background: var(--amber);
           border: 2px solid var(--ink);
           cursor: pointer;
         }
         .mp-budget-row input[type=range]::-moz-range-thumb {
-          width: 18px;
-          height: 18px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
           background: var(--amber);
           border: 2px solid var(--ink);
@@ -949,7 +962,7 @@ export default function MealPlanner() {
 
         /* ── Meal columns (oboje mode) ── */
         /* Dva stupca (Ručak | Večera) na širim ekranima, jedan ispod drugog
-           na mobilnom (< 600px). */
+           na mobilnom (< 768px). */
         .mp-meal-cols {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -972,7 +985,7 @@ export default function MealPlanner() {
           padding: 6px 0 10px;
           margin-bottom: 8px;
         }
-        @media (max-width: 599px) {
+        @media (max-width: 767px) {
           .mp-meal-cols {
             grid-template-columns: 1fr;
             gap: 0;
@@ -1024,10 +1037,12 @@ export default function MealPlanner() {
           display: flex;
           gap: 8px;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
           padding: 2px 2px 6px;
         }
         .mp-diet-chip {
           flex: 0 0 auto;
+          min-height: 44px;
           border: 1.5px solid var(--ink);
           border-radius: 999px;
           padding: 8px 14px;
@@ -1039,6 +1054,7 @@ export default function MealPlanner() {
           background: var(--paper-2);
           color: var(--ink);
           white-space: nowrap;
+          cursor: pointer;
         }
         .mp-diet-chip.active {
           background: var(--red);
@@ -1146,6 +1162,7 @@ export default function MealPlanner() {
         .mp-recipe.in-plan { border-color: var(--green); }
         .mp-recipe-head {
           width: 100%;
+          min-height: 44px;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -1155,6 +1172,11 @@ export default function MealPlanner() {
           border: none;
           text-align: left;
           color: inherit;
+          cursor: pointer;
+        }
+        /* Dopusti tekstu da se prelama (posebno u uskim stupcima) umjesto rezanja. */
+        .mp-recipe-head > div:first-child {
+          min-width: 0;
         }
         .mp-recipe-head h3 {
           font-family: 'Oswald', sans-serif;
@@ -1162,6 +1184,9 @@ export default function MealPlanner() {
           text-transform: uppercase;
           letter-spacing: 0.01em;
           margin-bottom: 4px;
+          overflow-wrap: break-word;
+          word-break: break-word;
+          hyphens: auto;
         }
         .mp-recipe-meta {
           font-family: 'Space Mono', monospace;
@@ -1243,6 +1268,7 @@ export default function MealPlanner() {
         }
         .mp-add-btn {
           width: 100%;
+          min-height: 44px;
           border: none;
           border-top: 1px solid var(--line);
           padding: 12px;
@@ -1257,6 +1283,7 @@ export default function MealPlanner() {
           align-items: center;
           justify-content: center;
           gap: 6px;
+          cursor: pointer;
         }
         .mp-recipe.in-plan .mp-add-btn {
           background: var(--green);
@@ -1463,8 +1490,13 @@ export default function MealPlanner() {
           color: var(--ink-soft);
           background: none;
           border: none;
+          min-width: 44px;
+          min-height: 44px;
           padding: 4px;
           display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
         }
         .mp-receipt-items {
           list-style: none;
@@ -1504,10 +1536,16 @@ export default function MealPlanner() {
           border: none;
           color: var(--red);
           font-family: 'Space Mono', monospace;
-          font-size: 14px;
+          font-size: 18px;
           font-weight: 700;
           padding: 0;
           line-height: 1;
+          min-width: 44px;
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -1569,7 +1607,10 @@ export default function MealPlanner() {
         .mp-footer-link {
           background: none;
           border: none;
-          padding: 0;
+          padding: 8px 0;
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
           font: inherit;
           font-weight: 600;
           color: var(--green);
@@ -1621,6 +1662,7 @@ export default function MealPlanner() {
           font: inherit;
           font-weight: 700;
           font-size: 13.5px;
+          min-height: 44px;
           border-radius: 9px;
           padding: 9px 16px;
           cursor: pointer;
