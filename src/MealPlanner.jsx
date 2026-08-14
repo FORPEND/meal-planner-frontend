@@ -532,6 +532,22 @@ export default function MealPlanner() {
   const [checkedItems, setCheckedItems] = useState({});
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
+  const [headerHidden, setHeaderHidden] = useState(false);
+
+  // Header se skriva pri scrollanju prema dolje, a vraća pri scrollanju gore.
+  // CSS transform je ograničen na < 768px pa na desktopu nema efekta.
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 12) setHeaderHidden(false);
+      else if (y > lastY + 6) setHeaderHidden(true);
+      else if (y < lastY - 6) setHeaderHidden(false);
+      lastY = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
   // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
   const [cookieConsent, setCookieConsent] = useState(null);
 
@@ -853,6 +869,14 @@ export default function MealPlanner() {
           background: var(--paper);
           z-index: 10;
           border-bottom: 1px solid var(--line);
+          transition: transform 0.28s ease;
+          will-change: transform;
+        }
+        /* Skrivanje headera pri scrollu prema dolje — samo na mobilnom (< 768px). */
+        @media (max-width: 767px) {
+          .mp-header.hidden {
+            transform: translateY(-100%);
+          }
         }
         .mp-eyebrow {
           font-family: 'Space Mono', monospace;
@@ -1060,6 +1084,20 @@ export default function MealPlanner() {
           .mp-meal-col {
             padding-right: 4px;
           }
+          /* Uski stupci: manji naslov, bez prelamanja riječi/crtica. */
+          .mp-meal-col .mp-recipe-head h3 {
+            font-size: 13px;
+            word-break: normal;
+            overflow-wrap: normal;
+            hyphens: none;
+          }
+          .mp-meal-col .mp-recipe-head {
+            padding: 12px;
+            gap: 8px;
+          }
+          .mp-meal-col .mp-price {
+            font-size: 15px;
+          }
         }
 
         /* ── Meal dividers (oboje mode) ── */
@@ -1167,17 +1205,20 @@ export default function MealPlanner() {
           gap: 6px;
           border-top: 2px dashed var(--ink);
           padding-top: 6px;
+          flex-wrap: nowrap;
         }
         .mp-tag-old {
           font-family: 'Space Mono', monospace;
           font-size: 11px;
           text-decoration: line-through;
           opacity: 0.6;
+          white-space: nowrap;
         }
         .mp-tag-new {
           font-family: 'Oswald', sans-serif;
           font-size: 19px;
           font-weight: 700;
+          white-space: nowrap;
         }
         .mp-tag-badge {
           position: absolute;
@@ -1266,6 +1307,7 @@ export default function MealPlanner() {
           font-size: 19px;
           font-weight: 700;
           color: var(--ink);
+          white-space: nowrap;
         }
         .mp-akcija-pill {
           display: inline-flex;
@@ -1830,7 +1872,7 @@ export default function MealPlanner() {
       `}</style>
 
       {/* ── HEADER ── */}
-      <header className="mp-header">
+      <header className={`mp-header ${headerHidden ? "hidden" : ""}`}>
         <div className="mp-eyebrow">Tjedni planer obroka</div>
         <h1 className="mp-title">Kuhaj štedljivo</h1>
 
