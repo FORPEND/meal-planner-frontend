@@ -636,6 +636,7 @@ export default function MealPlanner() {
       ? buildShoppingList(shoppingPlanRecipes, discounts)
       : null;
 
+  // eslint-disable-next-line no-unused-vars
   const shoppingTotal = shoppingList
     ? DEPT_ORDER.flatMap((d) => shoppingList[d] || [])
         .reduce((sum, item) => sum + (item.totalPrice || 0), 0)
