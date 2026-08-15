@@ -1086,15 +1086,19 @@ export default function MealPlanner() {
           padding: 20px 20px 110px;
         }
 
+        /* Napomena u sidebaru: skrivena na mobilnom (prikazuje se ona u mainu). */
+        .mp-note-sidebar { display: none; }
+
         /* ── Desktop two-column layout (≥ 768px) ── */
         /* Ispod 768px .mp-layout je običan block pa mobilni izgled ostaje isti. */
         @media (min-width: 768px) {
           .mp-layout {
             display: flex;
-            align-items: flex-start;
+            align-items: stretch;
             max-width: 1000px;
             margin: 0 auto;
           }
+          /* Lijevi sidebar puni visinu ekrana i slaže sadržaj u stupac. */
           .mp-header {
             flex: 0 0 320px;
             width: 320px;
@@ -1104,6 +1108,8 @@ export default function MealPlanner() {
             top: 0;
             height: 100vh;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             background: var(--paper-2);
             border-right: 1px solid var(--line);
             border-bottom: none;
@@ -1117,6 +1123,28 @@ export default function MealPlanner() {
           /* Filteri u lijevoj koloni ne trebaju veliki donji razmak. */
           .mp-header .mp-filters-section {
             margin-bottom: 4px;
+          }
+          /* Napomena gurnuta na samo dno sidebara. */
+          .mp-note-sidebar {
+            display: block;
+            margin-top: auto;
+            padding: 16px;
+            font-size: 11px;
+            color: #6B7280;
+            line-height: 1.5;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+          }
+          /* Napomena u mainu se skriva na desktopu (premještena je u sidebar). */
+          .mp-main > .mp-note { display: none; }
+
+          /* Donji budget bar stoji samo ispod desne kolone (Ručak+Večera),
+             ne ispod sidebara. Poravnat s glavnim područjem layouta. */
+          .mp-receipt {
+            left: calc(max(0px, (100vw - 1000px) / 2) + 320px);
+            right: max(0px, (100vw - 1000px) / 2);
+          }
+          .mp-receipt-inner {
+            max-width: none;
           }
         }
         .mp-section {
@@ -2300,6 +2328,12 @@ export default function MealPlanner() {
             ))}
           </div>
         </section>
+
+        {/* Napomena na dnu sidebara (samo desktop) */}
+        <p className="mp-note mp-note-sidebar">
+          Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
+          dolaze iz stvarnih kataloga navedenih dućana.
+        </p>
       </header>
 
       {/* ── MAIN (desna kolona na desktopu) ── */}
