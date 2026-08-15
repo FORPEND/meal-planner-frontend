@@ -656,6 +656,17 @@ export default function MealPlanner() {
   const toggleExcluded = (tag) =>
     setExcluded((ex) => (ex.includes(tag) ? ex.filter((x) => x !== tag) : [...ex, tag]));
 
+  // "Novi tjedan" — očisti odabrana jela i označene stavke; ostalo (dućan,
+  // budžet, filteri) ostaje. localStorage se ažurira preko postojećeg efekta
+  // koji sprema postavke kad se planRucak/planVecera promijene.
+  const handleReset = () => {
+    if (window.confirm("Jesi li siguran? Ovo će obrisati sva odabrana jela.")) {
+      setPlanRucak([]);
+      setPlanVecera([]);
+      setCheckedItems({});
+    }
+  };
+
   function renderRecipeList(visibleRecipes, plan, togglePlan, expanded, toggleExpand, loading) {
     if (loading) {
       return (
@@ -1718,7 +1729,8 @@ export default function MealPlanner() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 12px;
+          gap: 10px;
+          flex-wrap: wrap;
         }
         .mp-receipt-label {
           font-family: 'Space Mono', monospace;
@@ -1740,6 +1752,12 @@ export default function MealPlanner() {
           color: var(--ink-soft);
           font-weight: 400;
         }
+        .mp-receipt-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
         .mp-receipt-shop-btn {
           flex-shrink: 0;
           display: inline-flex;
@@ -1748,6 +1766,24 @@ export default function MealPlanner() {
           min-height: 40px;
           padding: 8px 14px;
           background: var(--amber);
+          color: var(--ink);
+          border: 2px solid var(--ink);
+          border-radius: 8px;
+          font-family: 'Space Mono', monospace;
+          font-weight: 700;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          white-space: nowrap;
+          cursor: pointer;
+        }
+        .mp-receipt-reset-btn {
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          min-height: 40px;
+          padding: 8px 14px;
+          background: transparent;
           color: var(--ink);
           border: 2px solid var(--ink);
           border-radius: 8px;
@@ -2164,15 +2200,25 @@ export default function MealPlanner() {
                 {fmt(receiptTotal)}{" "}
                 <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
               </div>
-              {shoppingList && (
-                <button
-                  className="mp-receipt-shop-btn"
-                  onClick={() => setShopOpen(true)}
-                >
-                  <ShoppingCart size={14} />
-                  Popis za dućan
-                </button>
-              )}
+              <div className="mp-receipt-actions">
+                {(planRucak.length > 0 || planVecera.length > 0) && (
+                  <button
+                    className="mp-receipt-reset-btn"
+                    onClick={handleReset}
+                  >
+                    Novi tjedan
+                  </button>
+                )}
+                {shoppingList && (
+                  <button
+                    className="mp-receipt-shop-btn"
+                    onClick={() => setShopOpen(true)}
+                  >
+                    <ShoppingCart size={14} />
+                    Popis za dućan
+                  </button>
+                )}
+              </div>
             </div>
             <div className="mp-receipt-bar">
               <div
