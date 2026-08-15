@@ -869,23 +869,23 @@ export default function MealPlanner() {
   return (
     <div className="mp-root">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Work+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
         .mp-root, .mp-root *, .mp-root *::before, .mp-root *::after {
           box-sizing: border-box;
         }
         .mp-root {
-          --paper: #FAF6ED;
-          --paper-2: #F1EADC;
-          --ink: #2A2620;
-          --ink-soft: #8C8273;
-          --green: #2F5D43;
-          --green-soft: #E1EAE3;
-          --amber: #F0A93B;
-          --amber-soft: #FDF3DC;
-          --red: #C0463A;
-          --line: #E2D8C4;
-          font-family: 'Work Sans', sans-serif;
+          --paper: #1E2328;
+          --paper-2: #252B33;
+          --ink: #FFFFFF;
+          --ink-soft: #9DA5B0;
+          --green: #00C896;
+          --green-soft: #1A3A30;
+          --amber: #00C896;
+          --amber-soft: #1A3A30;
+          --red: #FF6B6B;
+          --line: #2E3740;
+          font-family: 'Inter', sans-serif;
           background: var(--paper);
           color: var(--ink);
           min-height: 100vh;
@@ -911,7 +911,7 @@ export default function MealPlanner() {
           border-bottom: 1px solid var(--line);
         }
         .mp-eyebrow {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -929,12 +929,11 @@ export default function MealPlanner() {
           display: inline-block;
         }
         .mp-title {
-          font-family: 'Oswald', sans-serif;
-          font-weight: 700;
+          font-family: 'Inter', sans-serif;
+          font-weight: 800;
           font-size: 24px;
           line-height: 1.2;
-          text-transform: uppercase;
-          letter-spacing: 0.01em;
+          letter-spacing: -0.02em;
           margin-bottom: 14px;
         }
         .mp-meal-row {
@@ -945,12 +944,12 @@ export default function MealPlanner() {
         .mp-meal-row button {
           flex: 1;
           min-height: 44px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           font-weight: 700;
           padding: 9px 12px;
-          border: 2px solid var(--ink);
-          border-radius: 6px;
+          border: 2px solid var(--line);
+          border-radius: 12px;
           background: transparent;
           color: var(--ink);
           text-transform: uppercase;
@@ -968,7 +967,7 @@ export default function MealPlanner() {
           margin-bottom: 0;
         }
         .mp-field-label {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 10px;
           letter-spacing: 0.14em;
           text-transform: uppercase;
@@ -985,12 +984,12 @@ export default function MealPlanner() {
         .mp-store-row button {
           flex: 0 0 auto;
           min-height: 44px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           font-weight: 700;
           padding: 8px 14px;
-          border: 2px solid var(--ink);
-          border-radius: 999px;
+          border: 2px solid var(--line);
+          border-radius: 20px;
           background: transparent;
           color: var(--ink);
           text-transform: uppercase;
@@ -1029,16 +1028,16 @@ export default function MealPlanner() {
           height: 24px;
           margin-top: -10px;
           border-radius: 50%;
-          background: var(--amber);
-          border: 2px solid var(--ink);
+          background: #00C896;
+          border: 2px solid var(--line);
           cursor: pointer;
         }
         .mp-budget-row input[type=range]::-moz-range-thumb {
           width: 24px;
           height: 24px;
           border-radius: 50%;
-          background: var(--amber);
-          border: 2px solid var(--ink);
+          background: #00C896;
+          border: 2px solid var(--line);
           cursor: pointer;
         }
         .mp-budget-row input[type=range]::-moz-range-track {
@@ -1047,7 +1046,7 @@ export default function MealPlanner() {
           border-radius: 2px;
         }
         .mp-budget-value {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-weight: 700;
           font-size: 16px;
           min-width: 52px;
@@ -1066,7 +1065,7 @@ export default function MealPlanner() {
           margin-bottom: 28px;
         }
         .mp-section-label {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 12px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -1145,7 +1144,7 @@ export default function MealPlanner() {
           margin-top: 32px;
         }
         .mp-meal-divider-title {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 16px;
           font-weight: 700;
           text-transform: uppercase;
@@ -1169,10 +1168,10 @@ export default function MealPlanner() {
         .mp-diet-chip {
           flex: 0 0 auto;
           min-height: 44px;
-          border: 1.5px solid var(--ink);
-          border-radius: 999px;
+          border: 1.5px solid var(--line);
+          border-radius: 20px;
           padding: 8px 14px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           font-weight: 700;
           text-transform: uppercase;
@@ -1204,7 +1203,7 @@ export default function MealPlanner() {
           width: 128px;
           padding: 14px 12px 12px;
           position: relative;
-          border: 2px solid var(--ink);
+          border: 2px solid var(--line);
           border-radius: 4px 16px 4px 4px;
         }
         .mp-tag:nth-child(odd) { transform: rotate(-1.5deg); }
@@ -1216,7 +1215,7 @@ export default function MealPlanner() {
           width: 11px;
           height: 11px;
           background: var(--paper);
-          border: 2px solid var(--ink);
+          border: 2px solid var(--line);
           border-radius: 50%;
         }
         .mp-tag-name {
@@ -1227,7 +1226,7 @@ export default function MealPlanner() {
           padding-right: 16px;
         }
         .mp-tag-unit {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 10px;
           color: rgba(42, 38, 32, 0.6);
           margin-bottom: 10px;
@@ -1241,14 +1240,14 @@ export default function MealPlanner() {
           flex-wrap: nowrap;
         }
         .mp-tag-old {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           text-decoration: line-through;
           opacity: 0.6;
           white-space: nowrap;
         }
         .mp-tag-new {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 19px;
           font-weight: 700;
           white-space: nowrap;
@@ -1259,7 +1258,7 @@ export default function MealPlanner() {
           left: 10px;
           background: var(--ink);
           color: var(--paper);
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           font-weight: 700;
           padding: 3px 8px;
@@ -1284,11 +1283,12 @@ export default function MealPlanner() {
         }
         .mp-recipe {
           background: var(--paper-2);
-          border: 1px solid var(--line);
-          border-radius: 10px;
+          border: none;
+          border-radius: 20px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
           overflow: hidden;
         }
-        .mp-recipe.in-plan { border-color: var(--green); }
+        .mp-recipe.in-plan { box-shadow: 0 4px 20px rgba(0, 200, 150, 0.25); }
         .mp-recipe-head {
           width: 100%;
           min-height: 44px;
@@ -1308,7 +1308,7 @@ export default function MealPlanner() {
           min-width: 0;
         }
         .mp-recipe-head h3 {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 17px;
           text-transform: uppercase;
           letter-spacing: 0.01em;
@@ -1318,7 +1318,7 @@ export default function MealPlanner() {
           hyphens: auto;
         }
         .mp-recipe-meta {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           color: var(--ink-soft);
         }
@@ -1336,7 +1336,7 @@ export default function MealPlanner() {
           gap: 4px;
         }
         .mp-price {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 19px;
           font-weight: 700;
           color: var(--ink);
@@ -1346,11 +1346,11 @@ export default function MealPlanner() {
           display: inline-flex;
           align-items: center;
           gap: 3px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 10px;
           font-weight: 700;
           background: var(--amber);
-          color: var(--ink);
+          color: var(--paper);
           padding: 2px 6px;
           border-radius: 999px;
         }
@@ -1373,14 +1373,14 @@ export default function MealPlanner() {
           font-size: 14px;
           padding: 4px 0;
         }
-        .mp-ingredients li.akcija { color: #8A5A12; font-weight: 600; }
+        .mp-ingredients li.akcija { color: var(--green); font-weight: 600; }
         .mp-ing-name {
           display: inline-flex;
           align-items: center;
           gap: 5px;
         }
         .mp-ing-price {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 12px;
           display: flex;
           gap: 6px;
@@ -1402,13 +1402,13 @@ export default function MealPlanner() {
           border: none;
           border-top: 1px solid var(--line);
           padding: 12px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 12px;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          background: var(--green-soft);
-          color: var(--green);
+          background: linear-gradient(135deg, #00C896, #00A67A);
+          color: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1416,8 +1416,8 @@ export default function MealPlanner() {
           cursor: pointer;
         }
         .mp-recipe.in-plan .mp-add-btn {
-          background: var(--green);
-          color: var(--paper);
+          background: linear-gradient(135deg, #00A67A, #007A5A);
+          color: #fff;
         }
 
         /* ── Shopping list ── */
@@ -1428,7 +1428,7 @@ export default function MealPlanner() {
           margin-bottom: 16px;
         }
         .mp-shop-total {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 13px;
           font-weight: 700;
           color: var(--ink);
@@ -1443,7 +1443,7 @@ export default function MealPlanner() {
           padding: 10px 0 8px;
         }
         .mp-shop-dept-name {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 10px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
@@ -1470,7 +1470,7 @@ export default function MealPlanner() {
         .mp-shop-check {
           width: 20px;
           height: 20px;
-          border: 2px solid var(--ink);
+          border: 2px solid var(--line);
           border-radius: 4px;
           flex-shrink: 0;
           display: flex;
@@ -1503,7 +1503,7 @@ export default function MealPlanner() {
           margin-bottom: 2px;
         }
         .mp-shop-detail {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 10px;
           color: var(--ink-soft);
           line-height: 1.5;
@@ -1511,12 +1511,12 @@ export default function MealPlanner() {
         .mp-shop-pkg {
           display: inline-block;
           background: var(--amber-soft);
-          border: 1px solid rgba(240,169,59,0.4);
+          border: 1px solid rgba(0, 200, 150, 0.4);
           border-radius: 3px;
           padding: 1px 5px;
           font-size: 10px;
           font-weight: 700;
-          color: #7A5520;
+          color: var(--green);
           margin-left: 4px;
           vertical-align: middle;
         }
@@ -1525,7 +1525,7 @@ export default function MealPlanner() {
           font-weight: 700;
         }
         .mp-shop-price {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 12px;
           font-weight: 700;
           text-align: right;
@@ -1533,14 +1533,14 @@ export default function MealPlanner() {
           padding-top: 2px;
           min-width: 52px;
         }
-        .mp-shop-price.akcija { color: #7A5520; }
+        .mp-shop-price.akcija { color: var(--green); }
 
         /* ── Fullscreen popis za dućan ── */
         .mp-shop-fs {
           position: fixed;
           inset: 0;
           z-index: 200;
-          background: #FFFFFF;
+          background: var(--paper);
           display: flex;
           flex-direction: column;
         }
@@ -1552,8 +1552,8 @@ export default function MealPlanner() {
           gap: 12px;
           padding: 14px 16px;
           padding-top: calc(14px + env(safe-area-inset-top, 0px));
-          border-bottom: 2px solid var(--ink);
-          background: #FFFFFF;
+          border-bottom: 2px solid var(--line);
+          background: var(--paper-2);
         }
         .mp-shop-fs-tabs {
           display: flex;
@@ -1571,9 +1571,9 @@ export default function MealPlanner() {
           padding: 8px 14px;
           background: transparent;
           color: var(--ink);
-          border: 2px solid var(--ink);
+          border: 2px solid var(--line);
           border-radius: 999px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-weight: 700;
           font-size: 11px;
           text-transform: uppercase;
@@ -1582,8 +1582,8 @@ export default function MealPlanner() {
           cursor: pointer;
         }
         .mp-shop-tab.active {
-          background: var(--ink);
-          color: #FFFFFF;
+          background: var(--green);
+          color: var(--paper);
         }
         .mp-shop-fs-close {
           flex-shrink: 0;
@@ -1595,7 +1595,7 @@ export default function MealPlanner() {
           padding: 0;
           background: transparent;
           color: var(--ink);
-          border: 2px solid var(--ink);
+          border: 2px solid var(--line);
           border-radius: 50%;
           cursor: pointer;
         }
@@ -1611,7 +1611,7 @@ export default function MealPlanner() {
 
         /* ── Tab "Odabrana jela" ── */
         .mp-fs-meal-label {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-weight: 700;
           font-size: 14px;
           text-transform: uppercase;
@@ -1634,7 +1634,7 @@ export default function MealPlanner() {
           gap: 12px;
         }
         .mp-fs-recipe-head h3 {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 18px;
           text-transform: uppercase;
           letter-spacing: 0.01em;
@@ -1642,7 +1642,7 @@ export default function MealPlanner() {
           min-width: 0;
         }
         .mp-fs-recipe-price {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-weight: 700;
           font-size: 18px;
           color: var(--ink);
@@ -1650,7 +1650,7 @@ export default function MealPlanner() {
           flex-shrink: 0;
         }
         .mp-fs-recipe-meta {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
           color: var(--ink-soft);
           margin: 4px 0 12px;
@@ -1694,9 +1694,9 @@ export default function MealPlanner() {
           position: relative;
           width: 100%;
           max-width: 480px;
-          background: var(--paper-2);
+          background: #252B33;
           border-top: 1px solid var(--line);
-          box-shadow: 0 -6px 18px rgba(42, 38, 32, 0.08);
+          box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.35);
         }
         .mp-receipt-inner::before {
           content: '';
@@ -1733,21 +1733,21 @@ export default function MealPlanner() {
           flex-wrap: wrap;
         }
         .mp-receipt-label {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 10px;
           letter-spacing: 0.12em;
           text-transform: uppercase;
           color: var(--ink-soft);
         }
         .mp-receipt-total {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-size: 19px;
           font-weight: 700;
           white-space: nowrap;
           min-width: 0;
         }
         .mp-receipt-budget {
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 12px;
           color: var(--ink-soft);
           font-weight: 400;
@@ -1766,10 +1766,10 @@ export default function MealPlanner() {
           min-height: 40px;
           padding: 8px 14px;
           background: var(--amber);
-          color: var(--ink);
-          border: 2px solid var(--ink);
+          color: var(--paper);
+          border: 2px solid var(--amber);
           border-radius: 8px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-weight: 700;
           font-size: 11px;
           text-transform: uppercase;
@@ -1785,9 +1785,9 @@ export default function MealPlanner() {
           padding: 8px 14px;
           background: transparent;
           color: var(--ink);
-          border: 2px solid var(--ink);
+          border: 2px solid var(--line);
           border-radius: 8px;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-weight: 700;
           font-size: 11px;
           text-transform: uppercase;
@@ -1833,13 +1833,13 @@ export default function MealPlanner() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 13px;
           gap: 10px;
         }
         .mp-receipt-empty {
           color: var(--ink-soft);
-          font-family: 'Work Sans', sans-serif;
+          font-family: 'Inter', sans-serif;
           text-align: center;
           padding: 8px 0;
           justify-content: center;
@@ -1856,7 +1856,7 @@ export default function MealPlanner() {
           background: none;
           border: none;
           color: var(--red);
-          font-family: 'Space Mono', monospace;
+          font-family: 'Inter', sans-serif;
           font-size: 18px;
           font-weight: 700;
           padding: 0;
@@ -1894,7 +1894,7 @@ export default function MealPlanner() {
           animation: mp-spin 0.8s linear infinite;
         }
         .mp-loading-text {
-          font-family: 'Oswald', sans-serif;
+          font-family: 'Inter', sans-serif;
           font-weight: 500;
           text-transform: uppercase;
           letter-spacing: 1.5px;
@@ -1991,7 +1991,7 @@ export default function MealPlanner() {
         }
         .mp-cookie-accept {
           background: var(--amber);
-          color: var(--ink);
+          color: var(--paper);
         }
         .mp-cookie-accept:hover { filter: brightness(1.05); }
         .mp-cookie-decline {
