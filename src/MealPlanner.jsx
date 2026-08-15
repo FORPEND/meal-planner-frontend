@@ -700,7 +700,10 @@ export default function MealPlanner() {
           const inPlan = plan.includes(r.id);
           const isExpanded = expanded === r.id;
           return (
-            <article className={`mp-recipe ${inPlan ? "in-plan" : ""}`} key={r.id}>
+            <article
+              className={`mp-recipe ${inPlan ? "in-plan" : ""} ${isExpanded ? "expanded" : ""}`}
+              key={r.id}
+            >
               <button className="mp-recipe-head" onClick={() => toggleExpand(r.id)}>
                 <div>
                   <h3>{r.name}</h3>
@@ -1203,6 +1206,27 @@ export default function MealPlanner() {
             align-items: center;
             gap: 8px;
           }
+          /* Prošireni recept u oboje modu → centrirani mini-modal preko oba
+             stupca, s zatamnjenom pozadinom (box-shadow spread trik). */
+          .mp-meal-col .mp-recipe.expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: calc(100vw - 32px);
+            max-width: 440px;
+            max-height: 85vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            z-index: 300;
+            box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.7),
+              0 24px 60px rgba(0, 0, 0, 0.5);
+          }
+          /* U modalu naslov opet u jednom redu i čitljiviji. */
+          .mp-meal-col .mp-recipe.expanded .mp-recipe-head h3 {
+            font-size: 16px;
+            word-break: normal;
+          }
         }
 
         /* ── Meal dividers (oboje mode) ── */
@@ -1462,12 +1486,28 @@ export default function MealPlanner() {
         .mp-ing-price s { opacity: 0.5; }
         .mp-steps {
           margin: 12px 0 4px;
-          padding-left: 20px;
-          font-size: 14px;
-          line-height: 1.5;
+          padding-left: 0;
+          list-style: none;
+          counter-reset: step;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 10px;
+        }
+        .mp-steps li {
+          counter-increment: step;
+          position: relative;
+          padding-left: 30px;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+        .mp-steps li::before {
+          content: counter(step) ".";
+          position: absolute;
+          left: 0;
+          top: 0;
+          min-width: 22px;
+          font-weight: 700;
+          color: var(--green);
         }
         .mp-add-btn {
           width: 100%;
