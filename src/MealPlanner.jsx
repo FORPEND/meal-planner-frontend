@@ -1124,15 +1124,20 @@ export default function MealPlanner() {
             height: 100%;
             overflow-y: auto;
           }
-          /* Filteri u lijevoj koloni ne trebaju veliki donji razmak. */
-          .mp-header .mp-filters-section {
-            margin-bottom: 4px;
+          /* Kontrole (dućan, budžet, filteri) spuštene prema sredini sidebara:
+             auto-margina iznad kontrola i iznad napomene dijeli slobodni prostor
+             pa naslov ostaje na vrhu, kontrole u sredini, napomena na dnu. */
+          .mp-header .mp-meal-row {
+            margin-top: auto;
           }
-          /* Napomena gurnuta na samo dno sidebara. */
+          .mp-header .mp-filters-section {
+            margin-bottom: 0;
+          }
+          /* Napomena „visi" na samom dnu sidebara, jasno odvojena razmakom iznad. */
           .mp-note-sidebar {
             display: block;
             margin-top: auto;
-            padding: 16px;
+            padding: 24px 16px 16px;
             font-size: 11px;
             color: #6B7280;
             line-height: 1.5;
@@ -2080,9 +2085,11 @@ export default function MealPlanner() {
         }
 
         /* ── FOOTER ── */
+        /* Veliki donji padding da fiksni „Tjedni plan" bar nikad ne prekrije
+           podatke o privatnosti/firmi kad se doscrolla do dna. */
         .mp-footer {
           margin-top: 40px;
-          padding: 24px 16px calc(96px + env(safe-area-inset-bottom, 0px));
+          padding: 24px 16px calc(180px + env(safe-area-inset-bottom, 0px));
           border-top: 1px solid var(--line);
         }
         .mp-footer-inner {
