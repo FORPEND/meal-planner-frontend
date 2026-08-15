@@ -896,7 +896,6 @@ export default function MealPlanner() {
           width: 100%;
           max-width: 480px;
           padding: 20px 20px 16px;
-          position: relative;
           background: var(--paper);
           border-bottom: 1px solid var(--line);
         }
