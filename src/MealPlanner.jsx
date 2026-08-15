@@ -1061,6 +1061,40 @@ export default function MealPlanner() {
           max-width: 480px;
           padding: 20px 20px 110px;
         }
+
+        /* ── Desktop two-column layout (≥ 768px) ── */
+        /* Ispod 768px .mp-layout je običan block pa mobilni izgled ostaje isti. */
+        @media (min-width: 768px) {
+          .mp-layout {
+            display: flex;
+            align-items: flex-start;
+            max-width: 1000px;
+            margin: 0 auto;
+          }
+          .mp-header {
+            flex: 0 0 320px;
+            width: 320px;
+            max-width: 320px;
+            margin: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            background: var(--paper-2);
+            border-right: 1px solid var(--line);
+            border-bottom: none;
+          }
+          .mp-main {
+            flex: 1 1 auto;
+            width: auto;
+            max-width: none;
+            margin: 0;
+          }
+          /* Filteri u lijevoj koloni ne trebaju veliki donji razmak. */
+          .mp-header .mp-filters-section {
+            margin-bottom: 4px;
+          }
+        }
         .mp-section {
           margin-bottom: 28px;
         }
@@ -2002,7 +2036,8 @@ export default function MealPlanner() {
         .mp-cookie-decline:hover { border-color: var(--paper); }
       `}</style>
 
-      {/* ── HEADER ── */}
+      <div className="mp-layout">
+      {/* ── HEADER (lijeva kolona na desktopu) ── */}
       <header className="mp-header">
         <div className="mp-eyebrow">Tjedni planer obroka</div>
         <h1 className="mp-title">Kuhaj štedljivo</h1>
@@ -2081,13 +2116,8 @@ export default function MealPlanner() {
             </div>
           </div>
         )}
-      </header>
-
-      {/* ── MAIN ── */}
-      <main className="mp-main">
-
-        {/* Diet filters */}
-        <section className="mp-section">
+        {/* Filteri alergena (lijeva kolona na desktopu) */}
+        <section className="mp-section mp-filters-section">
           <div className="mp-section-label">
             <span className="mp-dot" />
             Što ne jedeš?
@@ -2105,6 +2135,10 @@ export default function MealPlanner() {
             ))}
           </div>
         </section>
+      </header>
+
+      {/* ── MAIN (desna kolona na desktopu) ── */}
+      <main className="mp-main">
 
         {/* Recipe lists */}
         <section className="mp-section">
@@ -2144,6 +2178,7 @@ export default function MealPlanner() {
           dolaze iz stvarnih kataloga navedenih dućana.
         </p>
       </main>
+      </div>
 
       {/* ── FULLSCREEN POPIS ZA DUĆAN ── */}
       {shopOpen && shoppingList && (
