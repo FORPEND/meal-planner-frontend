@@ -1164,6 +1164,24 @@ export default function MealPlanner() {
           .mp-meal-col .mp-price {
             font-size: 15px;
           }
+          /* Naziv i cijena u zasebnim redovima da se ne preklapaju na mobilnom. */
+          .mp-recipe-head {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+          }
+          .mp-recipe-head h3 {
+            font-size: 15px;
+          }
+          .mp-recipe-right {
+            width: 100%;
+            justify-content: space-between;
+          }
+          .mp-recipe-total {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+          }
         }
 
         /* ── Meal dividers (oboje mode) ── */
@@ -1875,7 +1893,7 @@ export default function MealPlanner() {
           color: var(--ink-soft);
           font-family: 'Inter', sans-serif;
           text-align: center;
-          padding: 8px 0;
+          padding: 24px 20px;
           justify-content: center;
         }
         .mp-receipt-sublabel {
