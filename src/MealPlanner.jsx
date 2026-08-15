@@ -1092,21 +1092,22 @@ export default function MealPlanner() {
         /* ── Desktop two-column layout (≥ 768px) ── */
         /* Ispod 768px .mp-layout je običan block pa mobilni izgled ostaje isti. */
         @media (min-width: 768px) {
+          /* App-shell: layout je visok 100vh; sidebar i main pune tu visinu,
+             a main scrolla interno. Zato align-items: stretch ima efekta. */
           .mp-layout {
             display: flex;
             align-items: stretch;
+            height: 100vh;
             max-width: 1000px;
             margin: 0 auto;
           }
-          /* Lijevi sidebar puni visinu ekrana i slaže sadržaj u stupac. */
+          /* Lijevi sidebar puni punu visinu i slaže sadržaj u stupac. */
           .mp-header {
             flex: 0 0 320px;
             width: 320px;
             max-width: 320px;
             margin: 0;
-            position: sticky;
-            top: 0;
-            height: 100vh;
+            height: 100%;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -1114,11 +1115,14 @@ export default function MealPlanner() {
             border-right: 1px solid var(--line);
             border-bottom: none;
           }
+          /* Desna kolona puni visinu i scrolla neovisno o sidebaru. */
           .mp-main {
             flex: 1 1 auto;
             width: auto;
             max-width: none;
             margin: 0;
+            height: 100%;
+            overflow-y: auto;
           }
           /* Filteri u lijevoj koloni ne trebaju veliki donji razmak. */
           .mp-header .mp-filters-section {
@@ -1137,13 +1141,14 @@ export default function MealPlanner() {
           /* Napomena u mainu se skriva na desktopu (premještena je u sidebar). */
           .mp-main > .mp-note { display: none; }
 
-          /* Donji budget bar stoji samo ispod desne kolone (Ručak+Večera),
-             ne ispod sidebara. Poravnat s glavnim područjem layouta. */
-          .mp-receipt {
+          /* Donji budget bar počinje tek od Ručak kolone (poravnat s desnom
+             kolonom), ne ispod sidebara. Viša specifičnost (.mp-root …) da
+             pobijedi bazno .mp-receipt { left:0; right:0 } koje dolazi kasnije. */
+          .mp-root .mp-receipt {
             left: calc(max(0px, (100vw - 1000px) / 2) + 320px);
             right: max(0px, (100vw - 1000px) / 2);
           }
-          .mp-receipt-inner {
+          .mp-root .mp-receipt-inner {
             max-width: none;
           }
         }
