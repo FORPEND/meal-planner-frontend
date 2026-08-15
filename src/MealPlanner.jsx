@@ -878,9 +878,7 @@ export default function MealPlanner() {
           color: var(--ink);
           min-height: 100vh;
           width: 100%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+          display: block;
         }
         .mp-root button {
           font-family: inherit;
@@ -893,6 +891,7 @@ export default function MealPlanner() {
 
         /* ── Header ── */
         .mp-header {
+          margin: 0 auto;
           width: 100%;
           max-width: 480px;
           padding: 20px 20px 16px;
@@ -1046,6 +1045,7 @@ export default function MealPlanner() {
 
         /* ── Main layout ── */
         .mp-main {
+          margin: 0 auto;
           width: 100%;
           max-width: 480px;
           padding: 20px 20px 110px;
