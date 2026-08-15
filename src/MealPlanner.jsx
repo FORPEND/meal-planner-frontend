@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Plus, Check, Tag, ShoppingCart } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Check, Tag, ShoppingCart, X } from "lucide-react";
 import PrivacyPolicy from "./PrivacyPolicy";
 
 const COOKIE_CONSENT_KEY = "ks_cookie_consent";
@@ -532,6 +532,7 @@ export default function MealPlanner() {
   const [checkedItems, setCheckedItems] = useState({});
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
+  const [shopTab, setShopTab] = useState("popis"); // "popis" | "jela"
   // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
   const [cookieConsent, setCookieConsent] = useState(null);
 
@@ -801,6 +802,54 @@ export default function MealPlanner() {
     });
   }
 
+  // Kartica jednog recepta u tabu "Odabrana jela": naziv, cijena, koraci.
+  function renderMealCard(r, prefix) {
+    return (
+      <div className="mp-fs-recipe" key={`${prefix}-${r.id}`}>
+        <div className="mp-fs-recipe-head">
+          <h3>{r.name}</h3>
+          <span className="mp-fs-recipe-price">{fmt(r.total)}</span>
+        </div>
+        <div className="mp-fs-recipe-meta">
+          {r.time} · {r.servings} {servingWord(r.servings)}
+        </div>
+        {r.steps && r.steps.length > 0 && (
+          <ol className="mp-fs-steps">
+            {r.steps.map((s, i) => (
+              <li key={i}>{s}</li>
+            ))}
+          </ol>
+        )}
+      </div>
+    );
+  }
+
+  // Tab "Odabrana jela": svi recepti dodani u plan (ručak + večera).
+  function renderSelectedMeals() {
+    if (mealMode === "oboje") {
+      if (planRecipesRucak.length === 0 && planRecipesVecera.length === 0) {
+        return <p className="mp-fs-empty">Plan je prazan — dodaj jelo.</p>;
+      }
+      return (
+        <>
+          {planRecipesRucak.length > 0 && (
+            <div className="mp-fs-meal-label">Ručak</div>
+          )}
+          {planRecipesRucak.map((r) => renderMealCard(r, "rucak"))}
+          {planRecipesVecera.length > 0 && (
+            <div className="mp-fs-meal-label">Večera</div>
+          )}
+          {planRecipesVecera.map((r) => renderMealCard(r, "vecera"))}
+        </>
+      );
+    }
+    const list = mealMode === "vecera" ? planRecipesVecera : planRecipesRucak;
+    if (list.length === 0) {
+      return <p className="mp-fs-empty">Plan je prazan — dodaj jelo.</p>;
+    }
+    return list.map((r) => renderMealCard(r, mealMode));
+  }
+
   if (showPrivacy) {
     return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />;
   }
@@ -847,10 +896,8 @@ export default function MealPlanner() {
           width: 100%;
           max-width: 480px;
           padding: 20px 20px 16px;
-          position: sticky;
-          top: 0;
+          position: relative;
           background: var(--paper);
-          z-index: 10;
           border-bottom: 1px solid var(--line);
         }
         .mp-eyebrow {
@@ -1482,7 +1529,7 @@ export default function MealPlanner() {
           position: fixed;
           inset: 0;
           z-index: 200;
-          background: var(--paper);
+          background: #FFFFFF;
           display: flex;
           flex-direction: column;
         }
@@ -1492,53 +1539,125 @@ export default function MealPlanner() {
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          padding: 16px 20px;
-          padding-top: calc(16px + env(safe-area-inset-top, 0px));
+          padding: 14px 16px;
+          padding-top: calc(14px + env(safe-area-inset-top, 0px));
           border-bottom: 2px solid var(--ink);
-          background: var(--paper-2);
+          background: #FFFFFF;
         }
-        .mp-shop-fs-title {
+        .mp-shop-fs-tabs {
           display: flex;
-          align-items: center;
           gap: 8px;
-          font-family: 'Oswald', sans-serif;
+          min-width: 0;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        .mp-shop-tab {
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 44px;
+          padding: 8px 14px;
+          background: transparent;
+          color: var(--ink);
+          border: 2px solid var(--ink);
+          border-radius: 999px;
+          font-family: 'Space Mono', monospace;
           font-weight: 700;
-          font-size: 18px;
+          font-size: 11px;
           text-transform: uppercase;
           letter-spacing: 0.04em;
-          min-width: 0;
+          white-space: nowrap;
+          cursor: pointer;
         }
-        .mp-shop-fs-total {
-          font-family: 'Space Mono', monospace;
-          font-size: 13px;
-          background: var(--amber);
-          color: var(--ink);
-          padding: 3px 8px;
-          border-radius: 6px;
+        .mp-shop-tab.active {
+          background: var(--ink);
+          color: #FFFFFF;
         }
         .mp-shop-fs-close {
           flex-shrink: 0;
-          min-height: 44px;
-          padding: 8px 18px;
-          background: var(--ink);
-          color: var(--paper);
-          border: none;
-          border-radius: 8px;
-          font-family: 'Space Mono', monospace;
-          font-weight: 700;
-          font-size: 12px;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
+          width: 44px;
+          height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0;
+          background: transparent;
+          color: var(--ink);
+          border: 2px solid var(--ink);
+          border-radius: 50%;
           cursor: pointer;
         }
         .mp-shop-fs-body {
           flex: 1;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
-          padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+          padding: 16px 20px calc(28px + env(safe-area-inset-bottom, 0px));
           width: 100%;
           max-width: 640px;
           margin: 0 auto;
+        }
+
+        /* ── Tab "Odabrana jela" ── */
+        .mp-fs-meal-label {
+          font-family: 'Oswald', sans-serif;
+          font-weight: 700;
+          font-size: 14px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: var(--ink-soft);
+          margin: 20px 0 10px;
+        }
+        .mp-fs-meal-label:first-child { margin-top: 4px; }
+        .mp-fs-recipe {
+          background: var(--paper-2);
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 12px;
+        }
+        .mp-fs-recipe-head {
+          display: flex;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 12px;
+        }
+        .mp-fs-recipe-head h3 {
+          font-family: 'Oswald', sans-serif;
+          font-size: 18px;
+          text-transform: uppercase;
+          letter-spacing: 0.01em;
+          overflow-wrap: break-word;
+          min-width: 0;
+        }
+        .mp-fs-recipe-price {
+          font-family: 'Oswald', sans-serif;
+          font-weight: 700;
+          font-size: 18px;
+          color: var(--ink);
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .mp-fs-recipe-meta {
+          font-family: 'Space Mono', monospace;
+          font-size: 11px;
+          color: var(--ink-soft);
+          margin: 4px 0 12px;
+        }
+        .mp-fs-steps {
+          margin: 0;
+          padding-left: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          font-size: 14px;
+          line-height: 1.55;
+        }
+        .mp-fs-empty {
+          color: var(--ink-soft);
+          text-align: center;
+          padding: 48px 20px;
+          font-size: 14px;
         }
 
         /* ── Misc ── */
@@ -1994,18 +2113,32 @@ export default function MealPlanner() {
       {shopOpen && shoppingList && (
         <div className="mp-shop-fs" role="dialog" aria-label="Popis za dućan">
           <div className="mp-shop-fs-head">
-            <div className="mp-shop-fs-title">
-              <ShoppingCart size={20} />
-              Popis za dućan
-              {shoppingTotal > 0 && (
-                <span className="mp-shop-fs-total">{fmt(shoppingTotal)}</span>
-              )}
+            <div className="mp-shop-fs-tabs">
+              <button
+                className={`mp-shop-tab ${shopTab === "popis" ? "active" : ""}`}
+                onClick={() => setShopTab("popis")}
+              >
+                <ShoppingCart size={14} />
+                Popis za dućan
+              </button>
+              <button
+                className={`mp-shop-tab ${shopTab === "jela" ? "active" : ""}`}
+                onClick={() => setShopTab("jela")}
+              >
+                Odabrana jela
+              </button>
             </div>
-            <button className="mp-shop-fs-close" onClick={() => setShopOpen(false)}>
-              Zatvori
+            <button
+              className="mp-shop-fs-close"
+              onClick={() => setShopOpen(false)}
+              aria-label="Zatvori"
+            >
+              <X size={22} />
             </button>
           </div>
-          <div className="mp-shop-fs-body">{renderShoppingGroups()}</div>
+          <div className="mp-shop-fs-body">
+            {shopTab === "popis" ? renderShoppingGroups() : renderSelectedMeals()}
+          </div>
         </div>
       )}
 
