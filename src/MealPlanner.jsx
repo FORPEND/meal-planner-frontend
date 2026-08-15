@@ -320,23 +320,34 @@ function parseAmount(str) {
 }
 
 // Formatira jednu količinu u zadanoj baznoj jedinici (g / ml / kom) u
-// čitljiv oblik (npr. 1500 g → "1.5 kg", 400 g → "400 g").
+// čitljiv oblik: masa/volumen bez razmaka (650g, 1kg, 1.5kg), komadi s
+// razmakom (9 kom). Male količine mase/volumena zaokružuju se na 1 decimalu.
 function fmtOne(value, unit) {
   if (unit === "g") {
     if (value >= 1000) {
       const kg = value / 1000;
-      return (Number.isInteger(kg) ? kg : parseFloat(kg.toFixed(1))) + " kg";
+      return (Number.isInteger(kg) ? kg : parseFloat(kg.toFixed(1))) + "kg";
     }
-    return Math.round(value) + " g";
+    const g = value >= 10 ? Math.round(value) : parseFloat(value.toFixed(1));
+    return g + "g";
   }
   if (unit === "ml") {
     if (value >= 1000) {
       const l = value / 1000;
-      return (Number.isInteger(l) ? l : parseFloat(l.toFixed(1))) + " L";
+      return (Number.isInteger(l) ? l : parseFloat(l.toFixed(1))) + "L";
     }
-    return Math.round(value) + " ml";
+    const ml = value >= 10 ? Math.round(value) : parseFloat(value.toFixed(1));
+    return ml + "ml";
   }
+  // Komadi: zaokruži na cijeli broj (npr. 9 kom).
   return Math.round(value) + " kom";
+}
+
+// Formatira oznaku pakiranja iz store unit stringa ("1 kg" → "1kg",
+// "500 g" → "500g", "10 kom" → "10 kom").
+function fmtPackageLabel(unitStr) {
+  const s = String(unitStr).trim();
+  return /kom/i.test(s) ? s.replace(/\s+/g, " ") : s.replace(/\s+/g, "");
 }
 
 // Pribraja količinu jednog sastojka u bazne jedinice (g / ml / kom).
@@ -424,7 +435,7 @@ function buildShoppingList(planRecipes, discounts) {
     if (pkg && pkg.unit === dominantUnit && pkg.value > 0) {
       packages = Math.max(1, Math.ceil(totalNeeded / pkg.value));
       const leftover = packages * pkg.value - totalNeeded;
-      if (leftover > 0) leftoverStr = "~" + fmtOne(leftover, dominantUnit);
+      if (leftover > 0) leftoverStr = fmtOne(leftover, dominantUnit);
     }
 
     items.push({
@@ -433,7 +444,7 @@ function buildShoppingList(planRecipes, discounts) {
       productName,
       neededStr: fmtOne(totalNeeded, dominantUnit),
       hasPackage: true,
-      packageStr: storeProduct.unit.replace(/\s+/g, ""),
+      packageStr: fmtPackageLabel(storeProduct.unit),
       packages,
       packagePrice: storeProduct.new,
       totalPrice: storeProduct.new * packages,
@@ -449,7 +460,7 @@ function buildShoppingList(planRecipes, discounts) {
     const totalNeeded =
       info.totalG > 0 ? info.totalG : info.totalMl > 0 ? info.totalMl : info.totalKom;
     const neededStr = hasQty
-      ? "~" + fmtOne(totalNeeded, dominantUnit)
+      ? fmtOne(totalNeeded, dominantUnit)
       : info.count > 1
       ? `${info.count}×`
       : "po potrebi";
@@ -533,6 +544,7 @@ export default function MealPlanner() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [shopTab, setShopTab] = useState("popis"); // "popis" | "jela"
+  const [resetOpen, setResetOpen] = useState(false);
   // undefined dok ne pročitamo pohranu; null = još nema odluke (prikaži banner).
   const [cookieConsent, setCookieConsent] = useState(null);
 
@@ -636,7 +648,6 @@ export default function MealPlanner() {
       ? buildShoppingList(shoppingPlanRecipes, discounts)
       : null;
 
-  // eslint-disable-next-line no-unused-vars
   const shoppingTotal = shoppingList
     ? DEPT_ORDER.flatMap((d) => shoppingList[d] || [])
         .reduce((sum, item) => sum + (item.totalPrice || 0), 0)
@@ -659,12 +670,12 @@ export default function MealPlanner() {
   // "Novi tjedan" — očisti odabrana jela i označene stavke; ostalo (dućan,
   // budžet, filteri) ostaje. localStorage se ažurira preko postojećeg efekta
   // koji sprema postavke kad se planRucak/planVecera promijene.
-  const handleReset = () => {
-    if (window.confirm("Jesi li siguran? Ovo će obrisati sva odabrana jela.")) {
-      setPlanRucak([]);
-      setPlanVecera([]);
-      setCheckedItems({});
-    }
+  const handleReset = () => setResetOpen(true);
+  const confirmReset = () => {
+    setPlanRucak([]);
+    setPlanVecera([]);
+    setCheckedItems({});
+    setResetOpen(false);
   };
 
   function renderRecipeList(visibleRecipes, plan, togglePlan, expanded, toggleExpand, loading) {
@@ -751,7 +762,7 @@ export default function MealPlanner() {
   // Zajednički prikaz namirnica grupiranih po odjelu (koristi fullscreen popis).
   function renderShoppingGroups() {
     if (!shoppingList) return null;
-    return DEPT_ORDER.map((dept) => {
+    const groups = DEPT_ORDER.map((dept) => {
       const items = shoppingList[dept];
       if (!items || items.length === 0) return null;
       return (
@@ -812,6 +823,16 @@ export default function MealPlanner() {
         </div>
       );
     });
+
+    return (
+      <>
+        {groups}
+        <div className="mp-shop-grand-total">
+          <span className="mp-shop-grand-label">Ukupno za kupiti</span>
+          <span className="mp-shop-grand-value">{fmt(shoppingTotal)}</span>
+        </div>
+      </>
+    );
   }
 
   // Kartica jednog recepta u tabu "Odabrana jela": naziv, cijena, koraci.
@@ -1586,6 +1607,31 @@ export default function MealPlanner() {
           min-width: 52px;
         }
         .mp-shop-price.akcija { color: var(--green); }
+        .mp-shop-grand-total {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-top: 20px;
+          padding-top: 16px;
+          border-top: 2px solid var(--line);
+        }
+        .mp-shop-grand-label {
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--ink-soft);
+        }
+        .mp-shop-grand-value {
+          font-family: 'Inter', sans-serif;
+          font-size: 20px;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+          color: var(--green);
+          white-space: nowrap;
+        }
 
         /* ── Fullscreen popis za dućan ── */
         .mp-shop-fs {
@@ -2052,6 +2098,67 @@ export default function MealPlanner() {
           border-color: rgba(250, 246, 237, 0.35);
         }
         .mp-cookie-decline:hover { border-color: var(--paper); }
+
+        /* ── Modal: Novi tjedan ── */
+        .mp-modal-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 300;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .mp-modal {
+          width: 100%;
+          max-width: 360px;
+          background: var(--paper-2);
+          border-radius: 20px;
+          padding: 28px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .mp-modal-title {
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: 20px;
+          color: #FFFFFF;
+          margin: 0 0 8px;
+        }
+        .mp-modal-text {
+          font-family: 'Inter', sans-serif;
+          font-size: 14px;
+          line-height: 1.5;
+          color: var(--ink-soft);
+          margin: 0 0 24px;
+        }
+        .mp-modal-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+        .mp-modal-cancel,
+        .mp-modal-confirm {
+          font-family: 'Inter', sans-serif;
+          font-weight: 700;
+          font-size: 14px;
+          border-radius: 12px;
+          padding: 12px 24px;
+          min-height: 44px;
+          cursor: pointer;
+        }
+        .mp-modal-cancel {
+          background: transparent;
+          color: #FFFFFF;
+          border: 1px solid var(--line);
+        }
+        .mp-modal-confirm {
+          background: linear-gradient(135deg, #00C896, #00A67A);
+          color: #FFFFFF;
+          border: none;
+        }
+        .mp-modal-confirm:hover { filter: brightness(1.05); }
       `}</style>
 
       <div className="mp-layout">
@@ -2227,6 +2334,32 @@ export default function MealPlanner() {
           </div>
           <div className="mp-shop-fs-body">
             {shopTab === "popis" ? renderShoppingGroups() : renderSelectedMeals()}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: NOVI TJEDAN ── */}
+      {resetOpen && (
+        <div className="mp-modal-overlay" onClick={() => setResetOpen(false)}>
+          <div
+            className="mp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Novi tjedan"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="mp-modal-title">Novi tjedan?</h2>
+            <p className="mp-modal-text">
+              Ovo će obrisati sva odabrana jela iz plana.
+            </p>
+            <div className="mp-modal-actions">
+              <button className="mp-modal-cancel" onClick={() => setResetOpen(false)}>
+                Odustani
+              </button>
+              <button className="mp-modal-confirm" onClick={confirmReset}>
+                Potvrdi
+              </button>
+            </div>
           </div>
         </div>
       )}
