@@ -886,6 +886,128 @@ export default function MealPlanner() {
     return list.map((r) => renderMealCard(r, mealMode));
   }
 
+  // Donji "Tjedni plan" bar. Na mobilnom je fiksan (CSS), na desktopu je
+  // zadnji element desne kolone u normalnom toku.
+  function renderReceipt() {
+    return (
+      <div className="mp-receipt">
+        <div className="mp-receipt-inner">
+          <div className="mp-receipt-summary">
+            <div className="mp-receipt-row1">
+              <div className="mp-receipt-label">Tjedni plan · {receiptCount} jela</div>
+              <button
+                className="mp-receipt-toggle"
+                onClick={() => setReceiptOpen((o) => !o)}
+                aria-label={receiptOpen ? "Sakrij stavke plana" : "Prikaži stavke plana"}
+              >
+                {receiptOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              </button>
+            </div>
+            <div className="mp-receipt-row2">
+              <div
+                className="mp-receipt-total"
+                style={{ color: overBudget ? "var(--red)" : "var(--ink)" }}
+              >
+                {fmt(receiptTotal)}{" "}
+                <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
+              </div>
+              <div className="mp-receipt-actions">
+                {(planRucak.length > 0 || planVecera.length > 0) && (
+                  <button className="mp-receipt-reset-btn" onClick={handleReset}>
+                    Novi tjedan
+                  </button>
+                )}
+                {shoppingList && (
+                  <button
+                    className="mp-receipt-shop-btn"
+                    onClick={() => setShopOpen(true)}
+                  >
+                    <ShoppingCart size={14} />
+                    Popis za dućan
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="mp-receipt-bar">
+              <div
+                className="mp-receipt-bar-fill"
+                style={{
+                  width: `${progressPct}%`,
+                  background: overBudget ? "var(--red)" : "var(--green)",
+                }}
+              />
+            </div>
+          </div>
+
+          {receiptOpen && (
+            <ul className="mp-receipt-items">
+              {mealMode === "oboje" ? (
+                <>
+                  {planRecipesRucak.length === 0 && planRecipesVecera.length === 0 && (
+                    <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
+                  )}
+                  {planRecipesRucak.length > 0 && (
+                    <li className="mp-receipt-sublabel">Ručak</li>
+                  )}
+                  {planRecipesRucak.map((r) => (
+                    <li key={`rucak-${r.id}`}>
+                      <span>{r.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {fmt(r.total)}
+                        <button
+                          className="mp-receipt-remove"
+                          onClick={() => togglePlanRucak(r.id)}
+                          aria-label={`Ukloni ${r.name} iz plana ručka`}
+                        >×</button>
+                      </span>
+                    </li>
+                  ))}
+                  {planRecipesVecera.length > 0 && (
+                    <li className="mp-receipt-sublabel">Večera</li>
+                  )}
+                  {planRecipesVecera.map((r) => (
+                    <li key={`vecera-${r.id}`}>
+                      <span>{r.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {fmt(r.total)}
+                        <button
+                          className="mp-receipt-remove"
+                          onClick={() => togglePlanVecera(r.id)}
+                          aria-label={`Ukloni ${r.name} iz plana večere`}
+                        >×</button>
+                      </span>
+                    </li>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {(mealMode === "rucak" ? planRecipesRucak : planRecipesVecera).length === 0 && (
+                    <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
+                  )}
+                  {(mealMode === "rucak" ? planRecipesRucak : planRecipesVecera).map((r) => (
+                    <li key={r.id}>
+                      <span>{r.name}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {fmt(r.total)}
+                        <button
+                          className="mp-receipt-remove"
+                          onClick={() =>
+                            mealMode === "rucak" ? togglePlanRucak(r.id) : togglePlanVecera(r.id)
+                          }
+                          aria-label={`Ukloni ${r.name} iz plana`}
+                        >×</button>
+                      </span>
+                    </li>
+                  ))}
+                </>
+              )}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (showPrivacy) {
     return <PrivacyPolicy onBack={() => setShowPrivacy(false)} />;
   }
@@ -1086,22 +1208,24 @@ export default function MealPlanner() {
           padding: 20px 20px 110px;
         }
 
-        /* Napomena u sidebaru: skrivena na mobilnom (prikazuje se ona u mainu). */
-        .mp-note-sidebar { display: none; }
+        /* Sidebar-footer (napomena + copyright) skriven na mobilnom. */
+        .mp-sidebar-foot { display: none; }
 
-        /* ── Desktop two-column layout (≥ 768px) ── */
+        /* ── Desktop app-shell layout (≥ 768px) ── */
         /* Ispod 768px .mp-layout je običan block pa mobilni izgled ostaje isti. */
         @media (min-width: 768px) {
-          /* App-shell: layout je visok 100vh; sidebar i main pune tu visinu,
-             a main scrolla interno. Zato align-items: stretch ima efekta. */
+          /* Cijeli layout je fiksiran na visinu ekrana; stranica se ne scrolla
+             kao cjelina — scrollaju samo sidebar i receptne kolone interno. */
           .mp-layout {
             display: flex;
             align-items: stretch;
             height: 100vh;
+            overflow: hidden;
             max-width: 1000px;
             margin: 0 auto;
           }
-          /* Lijevi sidebar puni punu visinu i slaže sadržaj u stupac. */
+          /* Lijevi sidebar: fiksna širina, puna visina, interni scroll. Sadržaj
+             ostaje pri vrhu; samo footer je gurnut na dno (margin-top: auto). */
           .mp-header {
             flex: 0 0 320px;
             width: 320px;
@@ -1115,47 +1239,84 @@ export default function MealPlanner() {
             border-right: 1px solid var(--line);
             border-bottom: none;
           }
-          /* Desna kolona puni visinu i scrolla neovisno o sidebaru. */
+          .mp-header .mp-filters-section {
+            margin-bottom: 0;
+          }
+          /* Footer (napomena + copyright) na samom dnu sidebara, ispod svega. */
+          .mp-sidebar-foot {
+            display: block;
+            margin-top: auto;
+            padding-top: 24px;
+          }
+          .mp-note-sidebar {
+            margin: 0 0 12px;
+            padding: 12px 0 0;
+            font-size: 11px;
+            color: #6B7280;
+            line-height: 1.5;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+          }
+          .mp-sidebar-copy {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+            color: #6B7280;
+          }
+          .mp-sidebar-copy .mp-footer-link {
+            align-self: flex-start;
+            min-height: 0;
+            padding: 2px 0;
+          }
+
+          /* Desna kolona: puni visinu, flex-column — receptni dio raste, a
+             budget bar je zadnji element u toku (nije fiksan/sticky). */
           .mp-main {
             flex: 1 1 auto;
             width: auto;
             max-width: none;
             margin: 0;
             height: 100%;
+            min-height: 0;
+            padding: 20px 20px 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+          /* Napomena u mainu (mobilna verzija) skrivena na desktopu. */
+          .mp-main > .mp-note { display: none; }
+          /* Receptni dio ispunjava slobodnu visinu; interni scroll. */
+          .mp-main .mp-recipe-section {
+            flex: 1 1 auto;
+            min-height: 0;
+            margin-bottom: 0;
             overflow-y: auto;
           }
-          /* Kontrole (dućan, budžet, filteri) spuštene prema sredini sidebara:
-             auto-margina iznad kontrola i iznad napomene dijeli slobodni prostor
-             pa naslov ostaje na vrhu, kontrole u sredini, napomena na dnu. */
-          .mp-header .mp-meal-row {
-            margin-top: auto;
+          /* Dvije receptne kolone su flex, svaka scrolla za sebe. */
+          .mp-recipe-section .mp-meal-cols {
+            display: flex;
+            height: 100%;
+            gap: 20px;
           }
-          .mp-header .mp-filters-section {
-            margin-bottom: 0;
+          .mp-recipe-section .mp-meal-col {
+            flex: 1 1 0;
+            min-width: 0;
+            height: 100%;
+            padding-right: 6px;
           }
-          /* Napomena „visi" na samom dnu sidebara, jasno odvojena razmakom iznad. */
-          .mp-note-sidebar {
-            display: block;
-            margin-top: auto;
-            padding: 24px 16px 16px;
-            font-size: 11px;
-            color: #6B7280;
-            line-height: 1.5;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+          /* Budget bar: normalan zadnji element desne kolone, ne fiksan. */
+          .mp-main .mp-receipt {
+            position: static;
+            left: auto;
+            right: auto;
+            flex: 0 0 auto;
+            z-index: auto;
           }
-          /* Napomena u mainu se skriva na desktopu (premještena je u sidebar). */
-          .mp-main > .mp-note { display: none; }
-
-          /* Donji budget bar počinje tek od Ručak kolone (poravnat s desnom
-             kolonom), ne ispod sidebara. Viša specifičnost (.mp-root …) da
-             pobijedi bazno .mp-receipt { left:0; right:0 } koje dolazi kasnije. */
-          .mp-root .mp-receipt {
-            left: calc(max(0px, (100vw - 1000px) / 2) + 320px);
-            right: max(0px, (100vw - 1000px) / 2);
-          }
-          .mp-root .mp-receipt-inner {
+          .mp-main .mp-receipt-inner {
             max-width: none;
           }
+          /* Skrivamo zasebni footer na dnu stranice (premješten je u sidebar). */
+          .mp-footer { display: none; }
         }
         .mp-section {
           margin-bottom: 28px;
@@ -2341,18 +2502,30 @@ export default function MealPlanner() {
           </div>
         </section>
 
-        {/* Napomena na dnu sidebara (samo desktop) */}
-        <p className="mp-note mp-note-sidebar">
-          Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
-          dolaze iz stvarnih kataloga navedenih dućana.
-        </p>
+        {/* Napomena + footer na samom dnu sidebara (samo desktop) */}
+        <div className="mp-sidebar-foot">
+          <p className="mp-note-sidebar">
+            Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
+            dolaze iz stvarnih kataloga navedenih dućana.
+          </p>
+          <div className="mp-sidebar-copy">
+            <span>© {new Date().getFullYear()} Kuhaj štedljivo · Čičak Bau d.o.o.</span>
+            <button
+              type="button"
+              className="mp-footer-link"
+              onClick={() => setShowPrivacy(true)}
+            >
+              Pravila privatnosti
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* ── MAIN (desna kolona na desktopu) ── */}
       <main className="mp-main">
 
         {/* Recipe lists */}
-        <section className="mp-section">
+        <section className="mp-section mp-recipe-section">
           {mealMode === "oboje" ? (
             <div className="mp-meal-cols">
               <div className="mp-meal-col">
@@ -2388,6 +2561,10 @@ export default function MealPlanner() {
           Napomena: cijene, akcije i recepti su primjer podataka radi prikaza koncepta — ne
           dolaze iz stvarnih kataloga navedenih dućana.
         </p>
+
+        {/* Budget bar — zadnji element desne kolone (na desktopu u toku,
+            na mobilnom fiksan preko CSS-a). */}
+        {renderReceipt()}
       </main>
       </div>
 
@@ -2450,125 +2627,6 @@ export default function MealPlanner() {
         </div>
       )}
 
-      {/* ── BOTTOM RECEIPT ── */}
-      <div className="mp-receipt">
-        <div className="mp-receipt-inner">
-          <div className="mp-receipt-summary">
-            <div className="mp-receipt-row1">
-              <div className="mp-receipt-label">Tjedni plan · {receiptCount} jela</div>
-              <button
-                className="mp-receipt-toggle"
-                onClick={() => setReceiptOpen((o) => !o)}
-                aria-label={receiptOpen ? "Sakrij stavke plana" : "Prikaži stavke plana"}
-              >
-                {receiptOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
-              </button>
-            </div>
-            <div className="mp-receipt-row2">
-              <div
-                className="mp-receipt-total"
-                style={{ color: overBudget ? "var(--red)" : "var(--ink)" }}
-              >
-                {fmt(receiptTotal)}{" "}
-                <span className="mp-receipt-budget">/ {fmt(receiptBudget)}</span>
-              </div>
-              <div className="mp-receipt-actions">
-                {(planRucak.length > 0 || planVecera.length > 0) && (
-                  <button
-                    className="mp-receipt-reset-btn"
-                    onClick={handleReset}
-                  >
-                    Novi tjedan
-                  </button>
-                )}
-                {shoppingList && (
-                  <button
-                    className="mp-receipt-shop-btn"
-                    onClick={() => setShopOpen(true)}
-                  >
-                    <ShoppingCart size={14} />
-                    Popis za dućan
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="mp-receipt-bar">
-              <div
-                className="mp-receipt-bar-fill"
-                style={{
-                  width: `${progressPct}%`,
-                  background: overBudget ? "var(--red)" : "var(--green)",
-                }}
-              />
-            </div>
-          </div>
-
-          {receiptOpen && (
-            <ul className="mp-receipt-items">
-              {mealMode === "oboje" ? (
-                <>
-                  {planRecipesRucak.length === 0 && planRecipesVecera.length === 0 && (
-                    <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
-                  )}
-                  {planRecipesRucak.length > 0 && (
-                    <li className="mp-receipt-sublabel">Ručak</li>
-                  )}
-                  {planRecipesRucak.map((r) => (
-                    <li key={`rucak-${r.id}`}>
-                      <span>{r.name}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {fmt(r.total)}
-                        <button
-                          className="mp-receipt-remove"
-                          onClick={() => togglePlanRucak(r.id)}
-                          aria-label={`Ukloni ${r.name} iz plana ručka`}
-                        >×</button>
-                      </span>
-                    </li>
-                  ))}
-                  {planRecipesVecera.length > 0 && (
-                    <li className="mp-receipt-sublabel">Večera</li>
-                  )}
-                  {planRecipesVecera.map((r) => (
-                    <li key={`vecera-${r.id}`}>
-                      <span>{r.name}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {fmt(r.total)}
-                        <button
-                          className="mp-receipt-remove"
-                          onClick={() => togglePlanVecera(r.id)}
-                          aria-label={`Ukloni ${r.name} iz plana večere`}
-                        >×</button>
-                      </span>
-                    </li>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {(mealMode === "rucak" ? planRecipesRucak : planRecipesVecera).length === 0 && (
-                    <li className="mp-receipt-empty">Plan je prazan — dodaj jelo iznad.</li>
-                  )}
-                  {(mealMode === "rucak" ? planRecipesRucak : planRecipesVecera).map((r) => (
-                    <li key={r.id}>
-                      <span>{r.name}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {fmt(r.total)}
-                        <button
-                          className="mp-receipt-remove"
-                          onClick={() =>
-                            mealMode === "rucak" ? togglePlanRucak(r.id) : togglePlanVecera(r.id)
-                          }
-                          aria-label={`Ukloni ${r.name} iz plana`}
-                        >×</button>
-                      </span>
-                    </li>
-                  ))}
-                </>
-              )}
-            </ul>
-          )}
-        </div>
-      </div>
 
       <footer className="mp-footer">
         <div className="mp-footer-inner">
